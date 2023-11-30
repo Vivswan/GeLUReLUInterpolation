@@ -1,0 +1,22 @@
+--extra-index-url https://download.pytorch.org/whl/cu118
+# conda install -y pytorch torchvision torchaudio pytorch-cuda=11.8 -c pytorch -c nvidia
+# torch
+# torchvision
+# torchaudio
+numpy
+scipy
+analogvnn
+
+# Research
+# conda install -y tensorflow tensorflow-gpu tensorboard
+# conda install -y graphviz python-graphviz pydot pydotplus python-dotenv
+# conda install -y --channel conda-forge pygraphviz
+# tensorflow
+# tensorboard
+torchviz
+torchinfo
+matplotlib~=3.7.4
+tabulate
+graphviz
+seaborn
+natsort
