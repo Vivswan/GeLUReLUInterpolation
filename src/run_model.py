@@ -36,6 +36,7 @@ class RunParameters:
     activation_fn: Type[Layer] = ReLUGeLUInterpolation
     activation_i: float = 0
     activation_s: float = 1
+    activation_alpha: float = 0
     norm_class: Optional[Type[Normalize]] = None
     precision_class: Type[Layer] = None
     precision: Optional[int] = None
@@ -66,6 +67,7 @@ class RunParameters:
             "activation_fn": self.activation_fn,
             "activation_i": self.activation_i,
             "activation_s": self.activation_s,
+            "activation_alpha": self.activation_alpha,
             "norm_class": self.norm_class,
             "precision_class": self.precision_class,
             "precision": self.precision,

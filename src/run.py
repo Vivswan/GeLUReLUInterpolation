@@ -88,6 +88,7 @@ def run_parser():
     parser.add_argument("--activation_fn", type=str, default="gelu")
     parser.add_argument("--activation_i", type=float, default=1.0)
     parser.add_argument("--activation_s", type=float, default=1.0)
+    parser.add_argument("--activation_alpha", type=float, default=0)
     parser.add_argument("--norm_class", type=str, default=None)
     parser.add_argument("--precision_class", type=str, default=None)
     parser.add_argument("--precision", type=int, default=None)

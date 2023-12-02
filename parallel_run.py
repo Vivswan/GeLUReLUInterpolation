@@ -30,6 +30,7 @@ combination_dict = OrderedDict({
     "activation_fn": ["gelu", "silu"],
     "activation_i": [0, 0.1, 0.2, 0.3, 0.4, 0.5, 0.6, 0.7, 0.8, 0.9, 1],
     "activation_s": [1, 1.25, 1.5, 1.75, 2, 2.25, 2.5, 2.75, 3],
+    "activation_alpha": [0, 0.01],
     "precision": [None, 4, 8, 16, 32, 64],
     "leakage": [None, 0.2, 0.3, 0.4, 0.5, 0.6, 0.7, 0.8],
 })

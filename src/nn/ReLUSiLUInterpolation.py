@@ -6,14 +6,14 @@ from torch import nn, Tensor
 
 
 class ReLUSiLUInterpolation(Activation):
-    def __init__(self, interpolate_factor: float, scaling_factor: float):
+    def __init__(self, interpolate_factor: float, scaling_factor: float, alpha: float = 0):
         super(ReLUSiLUInterpolation, self).__init__()
-        self._zero = nn.Parameter(torch.tensor(0), requires_grad=False)
+        self.alpha = nn.Parameter(torch.tensor(alpha), requires_grad=False)
         self.interpolate_factor = nn.Parameter(torch.tensor(interpolate_factor), requires_grad=False)
         self.scaling_factor = nn.Parameter(torch.tensor(scaling_factor), requires_grad=False)
 
     def forward(self, x: Tensor) -> Tensor:
-        relu = torch.maximum(self._zero, x)
+        relu = torch.maximum(x * self.alpha, x)
         silu = x / (1 + torch.exp(-x))
         return relu + self.interpolate_factor * (silu - relu)
 
@@ -21,7 +21,7 @@ class ReLUSiLUInterpolation(Activation):
         x = self.inputs
         e_x = torch.exp(x)
         grad_silu = (e_x * (1 + x + e_x)) / torch.pow(1 + e_x, torch.tensor(2))
-        grad_relu = (x >= 0).type(torch.float)
+        grad_relu = (x < 0).type(torch.float) * self.alpha + (x >= 0).type(torch.float)
         grad = grad_relu + self.interpolate_factor * (grad_silu - grad_relu)
         return grad_output * grad
 

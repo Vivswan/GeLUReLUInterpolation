@@ -23,6 +23,7 @@ class ConvModel(FullSequential):
             activation_fn: Type[Layer] = ReLUGeLUInterpolation,
             activation_i: float = 1.0,
             activation_s: float = 1.0,
+            activation_alpha: float = 0.0,
             norm_class: Type[Normalize] = None,
             precision_class: Type[Union[ReducePrecision]] = None,
             precision: Union[int, None] = None,
@@ -38,6 +39,7 @@ class ConvModel(FullSequential):
         self.activation_fn = activation_fn
         self.activation_i = activation_i
         self.activation_s = activation_s
+        self.activation_alpha = activation_alpha
         self.norm_class = norm_class
         self.precision_class = precision_class
         self.precision = precision
@@ -141,7 +143,11 @@ class ConvModel(FullSequential):
         if self.precision_class is not None:
             self.all_layers.append(self.precision_class(precision=self.precision))
 
-        self.all_layers.append(self.activation_fn(self.activation_i, self.activation_s))
+        self.all_layers.append(self.activation_fn(
+            interpolate_factor=self.activation_i,
+            scaling_factor=self.activation_s,
+            alpha=self.activation_alpha
+        ))
 
     def hyperparameters(self):
         return {
@@ -154,6 +160,7 @@ class ConvModel(FullSequential):
             'activation_fn': self.activation_fn.__name__,
             'activation_i': self.activation_i,
             'activation_s': self.activation_s,
+            'activation_alpha': self.activation_alpha,
             'norm_class_y': self.norm_class.__name__ if self.norm_class is not None else str(None),
             'precision_class_y': self.precision_class.__name__ if self.precision_class is not None else str(None),
             'precision_y': self.precision,
