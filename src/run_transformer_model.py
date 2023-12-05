@@ -10,10 +10,10 @@ from typing import Type, Optional, Tuple
 import numpy as np
 import torch.backends.cudnn
 from analogvnn.nn.module.Layer import Layer
+from analogvnn.nn.noise.GaussianNoise import GaussianNoise
 from analogvnn.nn.normalize.Clamp import Clamp
 from analogvnn.nn.normalize.Normalize import Normalize
 from analogvnn.nn.precision.ReducePrecision import ReducePrecision
-from analogvnn.nn.noise.GaussianNoise import GaussianNoise
 from analogvnn.parameter.PseudoParameter import PseudoParameter
 from analogvnn.utils.is_cpu_cuda import is_cpu_cuda
 from torch import optim, nn, Tensor
@@ -50,7 +50,7 @@ class TransformerRunParameters:
 
     color: bool = True
     batch_size: int = 20
-    epochs: int = 50
+    epochs: int = 10
     bptt: int = 35
 
     device: Optional[torch.device] = None
@@ -148,9 +148,7 @@ def train_on(
         if batch % log_interval == 0 and batch > 0:
             lr = scheduler.get_last_lr()[0]
             cur_loss = cur_loss / log_interval
-            ppl = math.exp(cur_loss)
-            print(f'| epoch {epoch:3d} | {batch:5d}/{num_batches:5d} batches | '
-                  f'lr {lr:02.2f} | loss {cur_loss:5.2f} | ppl {ppl:8.2f}')
+            print(f'| epoch {epoch:3d} | {batch:5d}/{num_batches:5d} batches | lr {lr:02.2f} | loss {cur_loss:5.4f}')
             cur_loss = 0
 
         if test_run:
@@ -261,9 +259,7 @@ def run_model(parameters: TransformerRunParameters):
     loss_accuracy = {
         "lr": [],
         "train_loss": [],
-        "train_ppl": [],
         "test_loss": [],
-        "test_ppl": [],
     }
 
     print(f"Starting Training...")
@@ -292,16 +288,10 @@ def run_model(parameters: TransformerRunParameters):
 
         loss_accuracy["lr"].append(lr)
         loss_accuracy["train_loss"].append(train_loss)
-        loss_accuracy["train_ppl"].append(math.exp(train_loss))
         loss_accuracy["test_loss"].append(test_loss)
-        loss_accuracy["test_ppl"].append(math.exp(test_loss))
 
         str_epoch = str(epoch + 1).zfill(math.ceil(math.log10(parameters.epochs)))
-        print_str = f'({str_epoch})' \
-                    f' Training Loss: {train_loss:.4f},' \
-                    f' Training ppl: {math.exp(train_loss):.2f},' \
-                    f' Testing Loss: {test_loss:.4f},' \
-                    f' Testing ppl: {math.exp(test_loss):.2f}\n'
+        print_str = f'({str_epoch}) Training Loss: {train_loss:.4f}, Testing Loss: {test_loss:.4f}\n'
         print(print_str)
 
         parameter_log["last_epoch"] = epoch
@@ -321,10 +311,10 @@ def run_model(parameters: TransformerRunParameters):
 
     if parameters.tensorboard:
         metric_dict = {
-            "train_ppl": loss_accuracy["train_ppl"][-1],
-            "test_ppl": loss_accuracy["test_ppl"][-1],
-            "max_train_ppl": np.min(loss_accuracy["train_ppl"]),
-            "min_test_ppl": np.min(loss_accuracy["test_ppl"]),
+            "train_loss": loss_accuracy["train_loss"][-1],
+            "test_loss": loss_accuracy["test_loss"][-1],
+            "max_train_loss": np.min(loss_accuracy["train_loss"]),
+            "min_test_loss": np.min(loss_accuracy["test_loss"]),
         }
         weight_model.tensorboard.tensorboard.add_hparams(
             hparam_dict=parameter_log,

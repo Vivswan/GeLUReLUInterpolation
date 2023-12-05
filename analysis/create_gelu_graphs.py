@@ -9,10 +9,7 @@ import matplotlib.colors
 import numpy as np
 import seaborn
 import torch
-from analogvnn.nn.activation.Gaussian import GeLU
 from analogvnn.nn.noise.GaussianNoise import GaussianNoise
-from analogvnn.nn.normalize.Clamp import Clamp
-from analogvnn.nn.precision.ReducePrecision import ReducePrecision
 from matplotlib import pyplot as plt
 from seaborn.palettes import _color_to_rgb, _ColorPalette
 from tqdm import tqdm
@@ -58,16 +55,34 @@ def apply_if_not_none(value, func):
 
 def sanitise_data(data):
     data["train_loss"] = data["loss_accuracy"]["train_loss"][-1] * 100
-    data["train_accuracy"] = data["loss_accuracy"]["train_accuracy"][-1] * 100
     data["test_loss"] = data["loss_accuracy"]["test_loss"][-1] * 100
-    data["test_accuracy"] = data["loss_accuracy"]["test_accuracy"][-1] * 100
-    data["min_train_loss"] = np.min(data["loss_accuracy"]["train_loss"][-1]) * 100
-    data["max_train_accuracy"] = np.max(data["loss_accuracy"]["train_accuracy"][-1]) * 100
-    data["min_test_loss"] = np.min(data["loss_accuracy"]["test_loss"][-1]) * 100
-    data["max_test_accuracy"] = np.max(data["loss_accuracy"]["test_accuracy"][-1]) * 100
+    data["min_train_loss"] = np.min(data["loss_accuracy"]["train_loss"]) * 100
+    data["min_test_loss"] = np.min(data["loss_accuracy"]["test_loss"]) * 100
 
-    py = data["hyperparameters_nn_model"]["precision_y"]
-    pw = data["hyperparameters_weight_model"]["precision_w"]
+    if "train_accuracy" in data["loss_accuracy"]:
+        data["train_accuracy"] = data["loss_accuracy"]["train_accuracy"][-1] * 100
+        data["test_accuracy"] = data["loss_accuracy"]["test_accuracy"][-1] * 100
+        data["max_train_accuracy"] = np.max(data["loss_accuracy"]["train_accuracy"]) * 100
+        data["max_test_accuracy"] = np.max(data["loss_accuracy"]["test_accuracy"]) * 100
+    else:
+        data["train_ppl"] = data["loss_accuracy"]["train_ppl"][-1]
+        data["test_ppl"] = data["loss_accuracy"]["test_ppl"][-1]
+        data["min_train_ppl"] = np.min(data["loss_accuracy"]["train_ppl"])
+        data["min_test_ppl"] = np.min(data["loss_accuracy"]["test_ppl"])
+        data["train_log_loss"] = np.log(data["loss_accuracy"]["train_ppl"][-1])
+        data["test_log_loss"] = np.log(data["loss_accuracy"]["test_ppl"][-1])
+        data["min_train_log_loss"] = np.log(np.min(data["loss_accuracy"]["train_ppl"]))
+        data["min_test_log_loss"] = np.log(np.min(data["loss_accuracy"]["test_ppl"]))
+
+    if "precision_y" not in data["parameter_log"]:
+        data["parameter_log"]["precision_y"] = data["parameter_log"]["precision"]
+        data["parameter_log"]["precision_class_y"] = data["parameter_log"]["precision_class"]
+        data["parameter_log"]["leakage_y"] = data["parameter_log"]["leakage"]
+        data["parameter_log"]["norm_class_y"] = data["parameter_log"]["norm_class"]
+        data["parameter_log"]["noise_class_y"] = data["parameter_log"]["noise_class"]
+
+    py = data["parameter_log"]["precision_y"]
+    pw = data["parameter_log"]["precision_w"]
     data["bit_precision_y"] = 32.0 if py is None else math.log2(py)
     data["bit_precision_w"] = 32.0 if pw is None else math.log2(pw)
 
@@ -256,7 +271,7 @@ def pre_plot(size_factor):
     return fig
 
 
-def post_plot(plot_data, y_lim=(10, 90)):
+def post_plot(plot_data, y_lim=(0, 10000)):
     x_axis_title = to_title_case(plot_data["x_axis"])
     y_axis_title = to_title_case(plot_data["y_axis"])
     filter_text = ""
@@ -614,12 +629,25 @@ if __name__ == '__main__':
     # compile_data(f"{location}/{prefix}_fli_results")
     # compile_data(f"{location}/{prefix}_fli0_results")
     # compile_data(f"{location}/{prefix}_fli1_results")
+    # compile_data(f"{location}/tranformer_gni_results")
+    # compile_data(f"{location}/tranformer_gpi_results")
+    # compile_data(f"{location}/tranformer_gpli_results")
+
+    create_line_figure_max(
+        f"{location}/tranformer_gpli_results.pt",
+        "parameter_log.activation_i",
+        "test_log_loss",
+        colorbar="parameter_log.leakage_w",
+        name="73",
+        size_factor=(6.5 * 1 / 3, 1.61803398874),
+        # filters={"parameter_log.leakage_w": 0.2},
+    )
 
     # filters = {
-    #     "bit_precision_w": 5,
+    #     # "bit_precision_w": 5,
     # }
     # create_line_figure_max(
-    #     f"{location}/{prefix}_pli_results.pt",
+    #     f"{location}/{prefix}_conv_pli_results.pt",
     #     "parameter_log.activation_i",
     #     "max_test_accuracy",
     #     colorbar="parameter_log.leakage_w",
@@ -628,7 +656,7 @@ if __name__ == '__main__':
     #     filters=filters,
     # )
     # create_line_figure_max(
-    #     f"{location}/{prefix}_pls_results.pt",
+    #     f"{location}/{prefix}_conv_pls_results.pt",
     #     "parameter_log.activation_s",
     #     "max_test_accuracy",
     #     colorbar="parameter_log.leakage_w",
@@ -637,7 +665,7 @@ if __name__ == '__main__':
     #     filters=filters,
     # )
     # create_line_figure_max(
-    #     f"{location}/{prefix}_pli_results.pt",
+    #     f"{location}/{prefix}_conv_pli_results.pt",
     #     "parameter_log.activation_i",
     #     "max_test_accuracy",
     #     colorbar="std_w",
@@ -647,7 +675,7 @@ if __name__ == '__main__':
     #     filters=filters,
     # )
     # create_line_figure_max(
-    #     f"{location}/{prefix}_pls_results.pt",
+    #     f"{location}/{prefix}_conv_pls_results.pt",
     #     "parameter_log.activation_s",
     #     "max_test_accuracy",
     #     colorbar="std_w",
@@ -657,7 +685,7 @@ if __name__ == '__main__':
     #     filters=filters,
     # )
     # create_line_figure_max(
-    #     f"{location}/{prefix}_cli1_results.pt",
+    #     f"{location}/{prefix}_conv_cli1_results.pt",
     #     "parameter_log.activation_i",
     #     "max_test_accuracy",
     #     colorbar="parameter_log.num_conv_layer",
@@ -666,7 +694,7 @@ if __name__ == '__main__':
     #     filters=filters,
     # )
     # create_line_figure_max(
-    #     f"{location}/{prefix}_cli_results.pt",
+    #     f"{location}/{prefix}_conv_cli_results.pt",
     #     "parameter_log.activation_i",
     #     "max_test_accuracy",
     #     colorbar="parameter_log.num_conv_layer",
@@ -675,7 +703,7 @@ if __name__ == '__main__':
     #     filters=filters,
     # )
     # create_line_figure_max(
-    #     f"{location}/{prefix}_ci_results.pt",
+    #     f"{location}/{prefix}_conv_ci_results.pt",
     #     "parameter_log.activation_i",
     #     "max_test_accuracy",
     #     colorbar="parameter_log.num_conv_layer",
@@ -684,7 +712,7 @@ if __name__ == '__main__':
     #     filters=filters,
     # )
     # create_line_figure_max(
-    #     f"{location}/{prefix}_fli0_results.pt",
+    #     f"{location}/{prefix}_conv_fli0_results.pt",
     #     "parameter_log.activation_i",
     #     "max_test_accuracy",
     #     colorbar="parameter_log.num_linear_layer",
@@ -693,7 +721,7 @@ if __name__ == '__main__':
     #     filters=filters,
     # )
     # create_line_figure_max(
-    #     f"{location}/{prefix}_fli_results.pt",
+    #     f"{location}/{prefix}_conv_fli_results.pt",
     #     "parameter_log.activation_i",
     #     "max_test_accuracy",
     #     colorbar="parameter_log.num_linear_layer",
@@ -702,7 +730,7 @@ if __name__ == '__main__':
     #     filters=filters,
     # )
     # create_line_figure_max(
-    #     f"{location}/{prefix}_fi_results.pt",
+    #     f"{location}/{prefix}_conv_fi_results.pt",
     #     "parameter_log.activation_i",
     #     "max_test_accuracy",
     #     colorbar="parameter_log.num_linear_layer",
@@ -711,25 +739,25 @@ if __name__ == '__main__':
     #     filters=filters,
     # )
 
-    precision = 2 ** 8
-    clamp = Clamp()
-    rp = ReducePrecision(precision=precision)
-    noise = GaussianNoise(leakage=0.5, precision=precision)
-    inputs = np.linspace(-0.25, 0.25, precision * 2 + 1)
-    weights = np.linspace(-0.25, 0.25, precision * 2 + 1)
-    x1 = clamp(torch.tensor(inputs, requires_grad=False))
-    x1 = rp(x1)
-    x1 = noise(x1)
-    x2 = clamp(torch.tensor(weights, requires_grad=False))
-    x2 = rp(x2)
-    x2 = noise(x2)
-    output = np.matmul(x1.reshape(-1, 1), x2.reshape(1, -1))
-    output = noise(output)
-    output = clamp(output)
-    output = rp(output)
-    output = np.clip(output, -1, 1)
-    output = GeLU()(output)
-    # diff = output - np.matmul(inputs.reshape(-1, 1), weights.reshape(1, -1))
-    plt.contourf(inputs, weights, output, levels=100)
-    plt.colorbar()
-    plt.show()
+    # precision = 2 ** 8
+    # clamp = Clamp()
+    # rp = ReducePrecision(precision=precision)
+    # noise = GaussianNoise(leakage=0.5, precision=precision)
+    # inputs = np.linspace(-0.25, 0.25, precision * 2 + 1)
+    # weights = np.linspace(-0.25, 0.25, precision * 2 + 1)
+    # x1 = clamp(torch.tensor(inputs, requires_grad=False))
+    # x1 = rp(x1)
+    # x1 = noise(x1)
+    # x2 = clamp(torch.tensor(weights, requires_grad=False))
+    # x2 = rp(x2)
+    # x2 = noise(x2)
+    # output = np.matmul(x1.reshape(-1, 1), x2.reshape(1, -1))
+    # output = noise(output)
+    # output = clamp(output)
+    # output = rp(output)
+    # output = np.clip(output, -1, 1)
+    # output = GeLU()(output)
+    # # diff = output - np.matmul(inputs.reshape(-1, 1), weights.reshape(1, -1))
+    # plt.contourf(inputs, weights, output, levels=100)
+    # plt.colorbar()
+    # plt.show()

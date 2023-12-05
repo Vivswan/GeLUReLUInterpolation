@@ -32,13 +32,13 @@ combination_dict = OrderedDict({
 })
 
 RUN_LIST = {
-    "gni": "num_transformer_layers:3,precision_class:None,noise_class:None,activation_fn:gelu",
-    "gpi": "num_transformer_layers:3,norm_class:Clamp,precision_class:ReducePrecision,noise_class:None,activation_fn:gelu",
-    "gpli": "num_transformer_layers:3,norm_class:Clamp,precision_class:ReducePrecision,noise_class:GaussianNoise,activation_fn:gelu",
+    "gelu_ni": "num_transformer_layers:3,precision_class:None,noise_class:None,activation_fn:gelu",
+    "gelu_pi": "num_transformer_layers:3,norm_class:Clamp,precision_class:ReducePrecision,noise_class:None,activation_fn:gelu",
+    "gelu_pli": "num_transformer_layers:3,norm_class:Clamp,precision_class:ReducePrecision,noise_class:GaussianNoise,activation_fn:gelu",
 
-    "snig": "num_transformer_layers:3,precision_class:None,noise_class:None,activation_fn:silu",
-    "spi": "num_transformer_layers:3,norm_class:Clamp,precision_class:ReducePrecision,noise_class:None,activation_fn:silu",
-    "spli": "num_transformer_layers:3,norm_class:Clamp,precision_class:ReducePrecision,noise_class:GaussianNoise,activation_fn:silu",
+    "silu_ni": "num_transformer_layers:3,precision_class:None,noise_class:None,activation_fn:silu",
+    "silu_pi": "num_transformer_layers:3,norm_class:Clamp,precision_class:ReducePrecision,noise_class:None,activation_fn:silu",
+    "silu_pli": "num_transformer_layers:3,norm_class:Clamp,precision_class:ReducePrecision,noise_class:GaussianNoise,activation_fn:silu",
 }
 
 
