@@ -13,9 +13,9 @@ from analogvnn.nn.module.Layer import Layer
 from analogvnn.nn.normalize.Clamp import Clamp
 from analogvnn.nn.normalize.Normalize import Normalize
 from analogvnn.nn.precision.ReducePrecision import ReducePrecision
+from analogvnn.nn.noise.GaussianNoise import GaussianNoise
 from analogvnn.parameter.PseudoParameter import PseudoParameter
 from analogvnn.utils.is_cpu_cuda import is_cpu_cuda
-from keras.src.layers import GaussianNoise
 from torch import optim, nn, Tensor
 from torch.optim import Optimizer
 

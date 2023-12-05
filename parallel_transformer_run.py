@@ -20,12 +20,11 @@ from torchtext.datasets import WikiText2
 from src.run_transformer_model import this_path
 
 combination_dict = OrderedDict({
-    "color": [False, True],
     "norm_class": [None, Clamp],
     "precision_class": [None, ReducePrecision],
     "noise_class": [None, GaussianNoise],
 
-    "num_transformer_layers": [1, 2, 3, 4, 5, 6, 7, 8, 9, 10],
+    "num_transformer_layers": [1, 2, 3, 4, 5, 6],
     "activation_fn": ["gelu", "silu"],
     "activation_i": [0, 0.1, 0.2, 0.3, 0.4, 0.5, 0.6, 0.7, 0.8, 0.9, 1],
     "precision": [None, 4, 8, 16, 32, 64],
@@ -33,9 +32,13 @@ combination_dict = OrderedDict({
 })
 
 RUN_LIST = {
-    "ni": "precision_class:None,noise_class:None",
-    "pi": "norm_class:Clamp,precision_class:ReducePrecision,noise_class:None",
-    "pli": "norm_class:Clamp,precision_class:ReducePrecision,noise_class:GaussianNoise",
+    "gni": "num_transformer_layers:3,precision_class:None,noise_class:None,activation_fn:gelu",
+    "gpi": "num_transformer_layers:3,norm_class:Clamp,precision_class:ReducePrecision,noise_class:None,activation_fn:gelu",
+    "gpli": "num_transformer_layers:3,norm_class:Clamp,precision_class:ReducePrecision,noise_class:GaussianNoise,activation_fn:gelu",
+
+    "snig": "num_transformer_layers:3,precision_class:None,noise_class:None,activation_fn:silu",
+    "spi": "num_transformer_layers:3,norm_class:Clamp,precision_class:ReducePrecision,noise_class:None,activation_fn:silu",
+    "spli": "num_transformer_layers:3,norm_class:Clamp,precision_class:ReducePrecision,noise_class:GaussianNoise,activation_fn:silu",
 }
 
 

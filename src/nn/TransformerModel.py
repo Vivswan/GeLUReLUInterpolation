@@ -145,10 +145,10 @@ class TransformerModel(nn.Module):
             'activation_i': self.activation_i,
             'activation_s': self.activation_s,
             'activation_alpha': self.activation_alpha,
-            'norm_class': self.norm_class,
-            'precision_class': self.precision_class,
+            'norm_class': self.norm_class.__name__ if self.norm_class is not None else str(None),
+            'precision_class': self.precision_class.__name__ if self.precision_class is not None else str(None),
             'precision': self.precision,
-            'noise_class': self.noise_class,
+            'noise_class': self.noise_class.__name__ if self.noise_class is not None else str(None),
             'leakage': self.leakage,
             'device': str(self.device),
         }

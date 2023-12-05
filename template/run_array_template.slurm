@@ -14,7 +14,7 @@
 
 source ~/.bashrc
 
-RunDirectoryLocation="${HOME}/storage/AnalogVNN-Research"
+RunDirectoryLocation="${HOME}/storage/GeLUReLUInterpolation"
 StorageDirectory="${HOME}/storage/"
 
 cd ~ || exit
