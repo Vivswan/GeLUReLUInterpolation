@@ -109,6 +109,29 @@ class TransformerModel(nn.Module):
         output = self.linear(output)
         return output
 
+    def zero_grad(self, set_to_none: bool = True) -> None:
+        r"""Resets gradients of all model parameters. See similar function
+        under :class:`torch.optim.Optimizer` for more context.
+
+        Args:
+            set_to_none (bool): instead of setting to zero, set the grads to None.
+                See :meth:`torch.optim.Optimizer.zero_grad` for details.
+        """
+
+        for p in self.parameters():
+            if p.grad is not None:
+                if set_to_none:
+                    p.grad = None
+                else:
+                    if p.grad.grad_fn is not None:
+                        p.grad.detach_()
+                    else:
+                        p.grad.requires_grad_(False)
+                    p.grad.zero_()
+
+    def parameters(self, recurse: bool = True):
+        return filter(lambda p: p.__class__ == nn.Parameter, super().parameters(recurse))
+
     def hyperparameters(self):
         return {
             'model_type': self.model_type,
@@ -129,23 +152,3 @@ class TransformerModel(nn.Module):
             'leakage': self.leakage,
             'device': str(self.device),
         }
-
-    def zero_grad(self, set_to_none: bool = True) -> None:
-        r"""Resets gradients of all model parameters. See similar function
-        under :class:`torch.optim.Optimizer` for more context.
-
-        Args:
-            set_to_none (bool): instead of setting to zero, set the grads to None.
-                See :meth:`torch.optim.Optimizer.zero_grad` for details.
-        """
-
-        for p in self.parameters():
-            if p.grad is not None:
-                if set_to_none:
-                    p.grad = None
-                else:
-                    if p.grad.grad_fn is not None:
-                        p.grad.detach_()
-                    else:
-                        p.grad.requires_grad_(False)
-                    p.grad.zero_()

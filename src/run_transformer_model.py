@@ -29,14 +29,14 @@ from src.nn.WeightModel import WeightModel
 
 
 @dataclass
-class RunParameters:
+class TransformerRunParameters:
     name: Optional[str] = None
     data_folder: Optional[str] = None
 
     num_transformer_layers: int = 2
-    embedding_dim: int = 200
-    dim_feedforward: int = 200
-    num_heads: int = 2
+    embedding_dim: int = 256
+    dim_feedforward: int = 256
+    num_heads: int = 4
     dropout: float = 0.2
     activation_fn: Type[Layer] = ReLUGeLUInterpolation
     activation_i: float = 0
@@ -50,7 +50,7 @@ class RunParameters:
 
     color: bool = True
     batch_size: int = 20
-    epochs: int = 1
+    epochs: int = 50
     bptt: int = 35
 
     device: Optional[torch.device] = None
@@ -113,10 +113,6 @@ def get_batch(source: Tensor, i: int, bptt: int) -> Tuple[Tensor, Tensor]:
     return data, target
 
 
-def get_model_parameters(model: nn.Module):
-    return filter(lambda p: p.__class__ == nn.Parameter, model.parameters())
-
-
 def train_on(
         model: nn.Module,
         train_data,
@@ -144,7 +140,7 @@ def train_on(
         output_flat = output.view(-1, ntokens)
         loss = criterion(output_flat, targets)
         loss.backward()
-        torch.nn.utils.clip_grad_norm_(get_model_parameters(model), 0.5)
+        torch.nn.utils.clip_grad_norm_(model.parameters(), 0.5)
         optimizer.step()
 
         cur_loss += loss.item()
@@ -184,7 +180,7 @@ def test_on(
     return total_loss / (len(eval_data) - 1)
 
 
-def run_model(parameters: RunParameters):
+def run_model(parameters: TransformerRunParameters):
     torch.backends.cudnn.benchmark = True
     is_cpu_cuda.use_cuda_if_available()
 
@@ -226,7 +222,7 @@ def run_model(parameters: RunParameters):
     nn_model = TransformerModel(**nn_model_params)
     weight_model = WeightModel(**weight_model_params)
     if parameters.tensorboard:
-        nn_model.create_tensorboard(paths.tensorboard)
+        weight_model.create_tensorboard(paths.tensorboard)
 
     PseudoParameter.parametrize_module(nn_model, transformation=weight_model)
     # for i in nn_model.modules():
@@ -238,7 +234,7 @@ def run_model(parameters: RunParameters):
     test_data = test_data.to(device)
 
     loss_function = nn.CrossEntropyLoss()
-    optimizer = optim.SGD(params=get_model_parameters(nn_model), lr=5.0)
+    optimizer = optim.SGD(params=nn_model.parameters(), lr=5.0)
     scheduler = torch.optim.lr_scheduler.StepLR(optimizer, 1, gamma=0.95)
 
     parameter_log = {
@@ -259,7 +255,8 @@ def run_model(parameters: RunParameters):
         file.write(str(weight_model) + "\n\n")
 
     if parameters.tensorboard:
-        nn_model.tensorboard.tensorboard.add_text("parameter", json.dumps(parameters.json, sort_keys=True, indent=2))
+        weight_model.tensorboard.tensorboard.add_text("parameter",
+                                                      json.dumps(parameters.json, sort_keys=True, indent=2))
 
     loss_accuracy = {
         "lr": [],
@@ -322,24 +319,14 @@ def run_model(parameters: RunParameters):
         torch.save(parameter_log, f"{paths.model_data}/{parameter_log['last_epoch']}_parameter_log")
         torch.save(loss_accuracy, f"{paths.model_data}/{parameter_log['last_epoch']}_loss_accuracy")
 
-        torch.save(nn_model.hyperparameters(),
-                   f"{paths.model_data}/{parameter_log['last_epoch']}_hyperparameters_nn_model")
-        torch.save(weight_model.hyperparameters(),
-                   f"{paths.model_data}/{parameter_log['last_epoch']}_hyperparameters_weight_model")
-
     if parameters.tensorboard:
-        parameter_log["input_shape"] = "_".join([str(x) for x in parameter_log["input_shape"]])
         metric_dict = {
-            "train_loss": loss_accuracy["train_loss"][-1],
-            "train_accuracy": loss_accuracy["train_accuracy"][-1],
-            "test_loss": loss_accuracy["test_loss"][-1],
-            "test_accuracy": loss_accuracy["test_accuracy"][-1],
-            "min_train_loss": np.min(loss_accuracy["train_loss"]),
-            "max_train_accuracy": np.max(loss_accuracy["train_accuracy"]),
-            "min_test_loss": np.min(loss_accuracy["test_loss"]),
-            "max_test_accuracy": np.max(loss_accuracy["test_accuracy"]),
+            "train_ppl": loss_accuracy["train_ppl"][-1],
+            "test_ppl": loss_accuracy["test_ppl"][-1],
+            "max_train_ppl": np.min(loss_accuracy["train_ppl"]),
+            "min_test_ppl": np.min(loss_accuracy["test_ppl"]),
         }
-        nn_model.tensorboard.tensorboard.add_hparams(
+        weight_model.tensorboard.tensorboard.add_hparams(
             hparam_dict=parameter_log,
             metric_dict=metric_dict
         )
@@ -353,8 +340,8 @@ def this_path():
     return Path(__file__)
 
 
-def get_parameters(kwargs) -> RunParameters:
-    parameters = RunParameters()
+def get_parameters(kwargs) -> TransformerRunParameters:
+    parameters = TransformerRunParameters()
 
     if kwargs["activation_fn"].lower() == "gelu":
         kwargs["activation_fn"] = ReLUGeLUInterpolation

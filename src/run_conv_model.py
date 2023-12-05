@@ -32,7 +32,7 @@ from src.nn.WeightModel import WeightModel
 
 
 @dataclass
-class RunParameters:
+class ConvRunParameters:
     name: Optional[str] = None
     data_folder: Optional[str] = None
 
@@ -93,7 +93,7 @@ class RunParameters:
         return f"RunParameters({json.dumps(self.json)})"
 
 
-def run_model(parameters: RunParameters):
+def run_model(parameters: ConvRunParameters):
     torch.backends.cudnn.benchmark = True
     is_cpu_cuda.use_cuda_if_available()
 
@@ -231,11 +231,6 @@ def run_model(parameters: RunParameters):
         torch.save(parameter_log, f"{paths.model_data}/{parameter_log['last_epoch']}_parameter_log")
         torch.save(loss_accuracy, f"{paths.model_data}/{parameter_log['last_epoch']}_loss_accuracy")
 
-        torch.save(nn_model.hyperparameters(),
-                   f"{paths.model_data}/{parameter_log['last_epoch']}_hyperparameters_nn_model")
-        torch.save(weight_model.hyperparameters(),
-                   f"{paths.model_data}/{parameter_log['last_epoch']}_hyperparameters_weight_model")
-
     if parameters.tensorboard:
         parameter_log["input_shape"] = "_".join([str(x) for x in parameter_log["input_shape"]])
         metric_dict = {
@@ -262,8 +257,8 @@ def this_path():
     return Path(__file__)
 
 
-def get_parameters(kwargs) -> RunParameters:
-    parameters = RunParameters()
+def get_parameters(kwargs) -> ConvRunParameters:
+    parameters = ConvRunParameters()
 
     if kwargs["color"].lower() == "true":
         kwargs["color"] = True
@@ -311,7 +306,7 @@ def run_parser():
     parser.add_argument("--leakage", type=float, default=None)
 
     parser.add_argument("--device", type=str, default=None)
-    parser.add_argument("--color", type=str, default=str(RunParameters.color))
+    parser.add_argument("--color", type=str, default=str(ConvRunParameters.color))
 
     parser.add_argument("--test_logs", action='store_true')
     parser.set_defaults(test_logs=False)
