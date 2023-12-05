@@ -69,6 +69,10 @@ class TransformerModel(nn.Module):
         self.leakage = leakage
         self.device = device
 
+        self.norm_class_layer = norm_class() if norm_class is not None else None
+        self.precision_class_layer = precision_class(precision=precision) if precision_class is not None else None
+        self.noise_class_layer = noise_class(leakage=leakage, precision=precision) if noise_class is not None else None
+
         self.pos_encoder = PositionalEncoding(embedding_dim, dropout)
         encoder_layers = TransformerEncoderLayer(
             embedding_dim,
@@ -99,6 +103,12 @@ class TransformerModel(nn.Module):
             output Tensor of shape ``[seq_len, batch_size, ntoken]``
         """
         src = self.embedding(src) * math.sqrt(self.embedding_dim)
+        # if self.norm_class_layer is not None:
+        #     src = self.norm_class_layer(src)
+        # if self.precision_class_layer is not None:
+        #     src = self.precision_class_layer(src)
+        if self.noise_class_layer is not None:
+            src = self.noise_class_layer(src)
         src = self.pos_encoder(src)
         if src_mask is None:
             """Generate a square causal mask for the sequence. The masked positions are filled with float('-inf').
@@ -145,10 +155,10 @@ class TransformerModel(nn.Module):
             'activation_i': self.activation_i,
             'activation_s': self.activation_s,
             'activation_alpha': self.activation_alpha,
-            'norm_class': self.norm_class.__name__ if self.norm_class is not None else str(None),
-            'precision_class': self.precision_class.__name__ if self.precision_class is not None else str(None),
-            'precision': self.precision,
-            'noise_class': self.noise_class.__name__ if self.noise_class is not None else str(None),
-            'leakage': self.leakage,
+            'norm_class_y': self.norm_class.__name__ if self.norm_class is not None else str(None),
+            'precision_class_y': self.precision_class.__name__ if self.precision_class is not None else str(None),
+            'precision_y': self.precision,
+            'noise_class_y': self.noise_class.__name__ if self.noise_class is not None else str(None),
+            'leakage_y': self.leakage,
             'device': str(self.device),
         }
