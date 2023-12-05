@@ -11,13 +11,13 @@ from collections import OrderedDict
 from multiprocessing.pool import ThreadPool
 from pathlib import Path
 
-import torchvision
 from analogvnn.nn.noise.GaussianNoise import GaussianNoise
 from analogvnn.nn.normalize.Clamp import *
 from analogvnn.nn.precision.ReducePrecision import ReducePrecision
 from natsort import natsorted, ns
+from torchtext.datasets import WikiText2
 
-from src.run_conv_model import this_path
+from src.run_transformer_model import this_path
 
 combination_dict = OrderedDict({
     "color": [False, True],
@@ -25,32 +25,17 @@ combination_dict = OrderedDict({
     "precision_class": [None, ReducePrecision],
     "noise_class": [None, GaussianNoise],
 
-    "num_conv_layer": [0, 1, 2, 3, 4, 5, 6],
-    "num_linear_layer": [1, 2, 3],
+    "num_transformer_layers": [1, 2, 3, 4, 5, 6, 7, 8, 9, 10],
     "activation_fn": ["gelu", "silu"],
     "activation_i": [0, 0.1, 0.2, 0.3, 0.4, 0.5, 0.6, 0.7, 0.8, 0.9, 1],
-    "activation_s": [1, 1.25, 1.5, 1.75, 2, 2.25, 2.5, 2.75, 3],
     "precision": [None, 4, 8, 16, 32, 64],
     "leakage": [None, 0.2, 0.3, 0.4, 0.5, 0.6, 0.7, 0.8],
 })
 
 RUN_LIST = {
-    "ni": "num_conv_layer:6,num_linear_layer:3,activation_s:1,precision_class:None,noise_class:None",
-    "pi": "num_conv_layer:6,num_linear_layer:3,activation_s:1,norm_class:Clamp,precision_class:ReducePrecision,noise_class:None",
-    "pli": "num_conv_layer:6,num_linear_layer:3,activation_s:1,norm_class:Clamp,precision_class:ReducePrecision,noise_class:GaussianNoise",
-
-    "ns": "num_conv_layer:6,num_linear_layer:3,activation_i:1,precision_class:None,noise_class:None",
-    "ps": "num_conv_layer:6,num_linear_layer:3,activation_i:1,norm_class:Clamp,precision_class:ReducePrecision,noise_class:None",
-    "pls": "num_conv_layer:6,num_linear_layer:3,activation_i:1,norm_class:Clamp,precision_class:ReducePrecision,noise_class:GaussianNoise",
-
-    "ci": "num_linear_layer:3,activation_s:1,precision_class:None,noise_class:None",
-    "cli": "leakage:0.8,num_linear_layer:3,activation_s:1,norm_class:Clamp,precision_class:ReducePrecision,noise_class:GaussianNoise",
-    "cli1": "leakage:0.8,num_linear_layer:1,activation_s:1,norm_class:Clamp,precision_class:ReducePrecision,noise_class:GaussianNoise",
-
-    "fi": "num_conv_layer:6,activation_s:1,precision_class:None,noise_class:None",
-    "fli": "leakage:0.8,num_conv_layer:6,activation_s:1,norm_class:Clamp,precision_class:ReducePrecision,noise_class:GaussianNoise",
-    "fli1": "leakage:0.8,num_conv_layer:1,activation_s:1,norm_class:Clamp,precision_class:ReducePrecision,noise_class:GaussianNoise",
-    "fli0": "leakage:0.8,num_conv_layer:0,activation_s:1,norm_class:Clamp,precision_class:ReducePrecision,noise_class:GaussianNoise",
+    "ni": "precision_class:None,noise_class:None",
+    "pi": "norm_class:Clamp,precision_class:ReducePrecision,noise_class:None",
+    "pli": "norm_class:Clamp,precision_class:ReducePrecision,noise_class:GaussianNoise",
 }
 
 
@@ -67,7 +52,7 @@ def prepare_data_folder(folder_path):
             continue
         os.mkdir(p)
 
-    torchvision.datasets.CIFAR10(root=str(datasets_path.absolute()), download=True)
+    WikiText2(root=str(datasets_path.absolute()))
 
 
 def run_command(command):

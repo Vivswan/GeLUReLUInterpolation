@@ -9,8 +9,10 @@ import matplotlib.colors
 import numpy as np
 import seaborn
 import torch
-import torchvision
+from analogvnn.nn.activation.Gaussian import GeLU
 from analogvnn.nn.noise.GaussianNoise import GaussianNoise
+from analogvnn.nn.normalize.Clamp import Clamp
+from analogvnn.nn.precision.ReducePrecision import ReducePrecision
 from matplotlib import pyplot as plt
 from seaborn.palettes import _color_to_rgb, _ColorPalette
 from tqdm import tqdm
@@ -598,7 +600,7 @@ def create_convergence_figure(data_path, size_factor):
 
 if __name__ == '__main__':
     location = r"C:\X"
-    prefix = "silu"
+    prefix = "gelu"
     # compile_data(f"{location}/{prefix}_ns_results")
     # compile_data(f"{location}/{prefix}_ni_results")
     # compile_data(f"{location}/{prefix}_ps_results")
@@ -613,95 +615,121 @@ if __name__ == '__main__':
     # compile_data(f"{location}/{prefix}_fli0_results")
     # compile_data(f"{location}/{prefix}_fli1_results")
 
-    create_line_figure_max(
-        f"{location}/{prefix}_pli_results.pt",
-        "parameter_log.activation_i",
-        "max_test_accuracy",
-        colorbar="parameter_log.leakage_w",
-        name="73",
-        size_factor=(6.5 * 1 / 3, 1.61803398874),
-        filters={"parameter_log.dataset": torchvision.datasets.CIFAR10.__name__},
-    )
-    create_line_figure_max(
-        f"{location}/{prefix}_pls_results.pt",
-        "parameter_log.activation_s",
-        "max_test_accuracy",
-        colorbar="parameter_log.leakage_w",
-        name="73",
-        size_factor=(6.5 * 1 / 3, 1.61803398874),
-        filters={"parameter_log.dataset": torchvision.datasets.CIFAR10.__name__},
-    )
-    create_line_figure_max(
-        f"{location}/{prefix}_pli_results.pt",
-        "parameter_log.activation_i",
-        "max_test_accuracy",
-        colorbar="std_w",
-        name="73",
-        max_vmax=0.1,
-        size_factor=(6.5 * 1 / 3, 1.61803398874),
-        filters={"parameter_log.dataset": torchvision.datasets.CIFAR10.__name__},
-    )
-    create_line_figure_max(
-        f"{location}/{prefix}_pls_results.pt",
-        "parameter_log.activation_s",
-        "max_test_accuracy",
-        colorbar="std_w",
-        name="73",
-        size_factor=(6.5 * 1 / 3, 1.61803398874),
-        max_vmax=0.1,
-        filters={"parameter_log.dataset": torchvision.datasets.CIFAR10.__name__},
-    )
-    create_line_figure_max(
-        f"{location}/{prefix}_cli1_results.pt",
-        "parameter_log.activation_i",
-        "max_test_accuracy",
-        colorbar="parameter_log.num_conv_layer",
-        name="73",
-        size_factor=(6.5 * 1 / 3, 1.61803398874),
-        filters={"parameter_log.dataset": torchvision.datasets.CIFAR10.__name__},
-    )
-    create_line_figure_max(
-        f"{location}/{prefix}_cli_results.pt",
-        "parameter_log.activation_i",
-        "max_test_accuracy",
-        colorbar="parameter_log.num_conv_layer",
-        name="73",
-        size_factor=(6.5 * 1 / 3, 1.61803398874),
-        filters={"parameter_log.dataset": torchvision.datasets.CIFAR10.__name__},
-    )
-    create_line_figure_max(
-        f"{location}/{prefix}_ci_results.pt",
-        "parameter_log.activation_i",
-        "max_test_accuracy",
-        colorbar="parameter_log.num_conv_layer",
-        name="73",
-        size_factor=(6.5 * 1 / 3, 1.61803398874),
-        filters={"parameter_log.dataset": torchvision.datasets.CIFAR10.__name__},
-    )
-    create_line_figure_max(
-        f"{location}/{prefix}_fli0_results.pt",
-        "parameter_log.activation_i",
-        "max_test_accuracy",
-        colorbar="parameter_log.num_linear_layer",
-        name="73",
-        size_factor=(6.5 * 1 / 3, 1.61803398874),
-        filters={"parameter_log.dataset": torchvision.datasets.CIFAR10.__name__},
-    )
-    create_line_figure_max(
-        f"{location}/{prefix}_fli_results.pt",
-        "parameter_log.activation_i",
-        "max_test_accuracy",
-        colorbar="parameter_log.num_linear_layer",
-        name="73",
-        size_factor=(6.5 * 1 / 3, 1.61803398874),
-        filters={"parameter_log.dataset": torchvision.datasets.CIFAR10.__name__},
-    )
-    create_line_figure_max(
-        f"{location}/{prefix}_fi_results.pt",
-        "parameter_log.activation_i",
-        "max_test_accuracy",
-        colorbar="parameter_log.num_linear_layer",
-        name="73",
-        size_factor=(6.5 * 1 / 3, 1.61803398874),
-        filters={"parameter_log.dataset": torchvision.datasets.CIFAR10.__name__},
-    )
+    # filters = {
+    #     "bit_precision_w": 5,
+    # }
+    # create_line_figure_max(
+    #     f"{location}/{prefix}_pli_results.pt",
+    #     "parameter_log.activation_i",
+    #     "max_test_accuracy",
+    #     colorbar="parameter_log.leakage_w",
+    #     name="73",
+    #     size_factor=(6.5 * 1 / 3, 1.61803398874),
+    #     filters=filters,
+    # )
+    # create_line_figure_max(
+    #     f"{location}/{prefix}_pls_results.pt",
+    #     "parameter_log.activation_s",
+    #     "max_test_accuracy",
+    #     colorbar="parameter_log.leakage_w",
+    #     name="73",
+    #     size_factor=(6.5 * 1 / 3, 1.61803398874),
+    #     filters=filters,
+    # )
+    # create_line_figure_max(
+    #     f"{location}/{prefix}_pli_results.pt",
+    #     "parameter_log.activation_i",
+    #     "max_test_accuracy",
+    #     colorbar="std_w",
+    #     name="73",
+    #     max_vmax=0.1,
+    #     size_factor=(6.5 * 1 / 3, 1.61803398874),
+    #     filters=filters,
+    # )
+    # create_line_figure_max(
+    #     f"{location}/{prefix}_pls_results.pt",
+    #     "parameter_log.activation_s",
+    #     "max_test_accuracy",
+    #     colorbar="std_w",
+    #     name="73",
+    #     size_factor=(6.5 * 1 / 3, 1.61803398874),
+    #     max_vmax=0.1,
+    #     filters=filters,
+    # )
+    # create_line_figure_max(
+    #     f"{location}/{prefix}_cli1_results.pt",
+    #     "parameter_log.activation_i",
+    #     "max_test_accuracy",
+    #     colorbar="parameter_log.num_conv_layer",
+    #     name="73",
+    #     size_factor=(6.5 * 1 / 3, 1.61803398874),
+    #     filters=filters,
+    # )
+    # create_line_figure_max(
+    #     f"{location}/{prefix}_cli_results.pt",
+    #     "parameter_log.activation_i",
+    #     "max_test_accuracy",
+    #     colorbar="parameter_log.num_conv_layer",
+    #     name="73",
+    #     size_factor=(6.5 * 1 / 3, 1.61803398874),
+    #     filters=filters,
+    # )
+    # create_line_figure_max(
+    #     f"{location}/{prefix}_ci_results.pt",
+    #     "parameter_log.activation_i",
+    #     "max_test_accuracy",
+    #     colorbar="parameter_log.num_conv_layer",
+    #     name="73",
+    #     size_factor=(6.5 * 1 / 3, 1.61803398874),
+    #     filters=filters,
+    # )
+    # create_line_figure_max(
+    #     f"{location}/{prefix}_fli0_results.pt",
+    #     "parameter_log.activation_i",
+    #     "max_test_accuracy",
+    #     colorbar="parameter_log.num_linear_layer",
+    #     name="73",
+    #     size_factor=(6.5 * 1 / 3, 1.61803398874),
+    #     filters=filters,
+    # )
+    # create_line_figure_max(
+    #     f"{location}/{prefix}_fli_results.pt",
+    #     "parameter_log.activation_i",
+    #     "max_test_accuracy",
+    #     colorbar="parameter_log.num_linear_layer",
+    #     name="73",
+    #     size_factor=(6.5 * 1 / 3, 1.61803398874),
+    #     filters=filters,
+    # )
+    # create_line_figure_max(
+    #     f"{location}/{prefix}_fi_results.pt",
+    #     "parameter_log.activation_i",
+    #     "max_test_accuracy",
+    #     colorbar="parameter_log.num_linear_layer",
+    #     name="73",
+    #     size_factor=(6.5 * 1 / 3, 1.61803398874),
+    #     filters=filters,
+    # )
+
+    precision = 2 ** 8
+    clamp = Clamp()
+    rp = ReducePrecision(precision=precision)
+    noise = GaussianNoise(leakage=0.5, precision=precision)
+    inputs = np.linspace(-0.25, 0.25, precision * 2 + 1)
+    weights = np.linspace(-0.25, 0.25, precision * 2 + 1)
+    x1 = clamp(torch.tensor(inputs, requires_grad=False))
+    x1 = rp(x1)
+    x1 = noise(x1)
+    x2 = clamp(torch.tensor(weights, requires_grad=False))
+    x2 = rp(x2)
+    x2 = noise(x2)
+    output = np.matmul(x1.reshape(-1, 1), x2.reshape(1, -1))
+    output = noise(output)
+    output = clamp(output)
+    output = rp(output)
+    output = np.clip(output, -1, 1)
+    output = GeLU()(output)
+    # diff = output - np.matmul(inputs.reshape(-1, 1), weights.reshape(1, -1))
+    plt.contourf(inputs, weights, output, levels=100)
+    plt.colorbar()
+    plt.show()

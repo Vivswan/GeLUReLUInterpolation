@@ -1,8 +1,10 @@
+import argparse
 import dataclasses
 import hashlib
 import json
 import math
 from dataclasses import dataclass
+from pathlib import Path
 from typing import Type, Optional
 
 import numpy as np
@@ -10,19 +12,22 @@ import torch.backends.cudnn
 import torchinfo
 import torchvision
 from analogvnn.nn.module.Layer import Layer
+from analogvnn.nn.normalize.Clamp import Clamp
 from analogvnn.nn.normalize.Normalize import Normalize
+from analogvnn.nn.precision.ReducePrecision import ReducePrecision
 from analogvnn.parameter.PseudoParameter import PseudoParameter
 from analogvnn.utils.is_cpu_cuda import is_cpu_cuda
-from analogvnn.utils.render_autograd_graph import save_autograd_graph_from_module
+from keras.src.layers import GaussianNoise
 from torch import optim, nn
-from torch.optim import Optimizer
 from torchvision.datasets import VisionDataset
 
 from src.dataloaders.load_vision_dataset import load_vision_dataset
 from src.fn.cross_entropy_loss_accuracy import cross_entropy_loss_accuracy
 from src.fn.data_dirs import data_dirs
+from src.fn.misc import select_class, check
 from src.nn.ConvModel import ConvModel
 from src.nn.ReLUGeLUInterpolation import ReLUGeLUInterpolation
+from src.nn.ReLUSiLUInterpolation import ReLUSiLUInterpolation
 from src.nn.WeightModel import WeightModel
 
 
@@ -43,8 +48,6 @@ class RunParameters:
     noise_class: Type[Layer] = None
     leakage: Optional[float] = None
 
-    optimiser_class: Type[Optimizer] = optim.Adam
-    optimiser_parameters: dict = None
     dataset: Type[VisionDataset] = torchvision.datasets.CIFAR10
     color: bool = True
     batch_size: int = 512
@@ -56,9 +59,6 @@ class RunParameters:
     tensorboard: bool = False
     save_data: bool = True
     timestamp: str = None
-
-    def __init__(self):
-        self.optimiser_parameters = {}
 
     @property
     def nn_model_params(self):
@@ -177,22 +177,6 @@ def run_model(parameters: RunParameters):
     if parameters.tensorboard:
         nn_model.tensorboard.tensorboard.add_text("parameter", json.dumps(parameters.json, sort_keys=True, indent=2))
 
-    print(f"Saving Graphs...")
-    save_autograd_graph_from_module(
-        paths.logs.joinpath(f"{paths.name}_nn_model"),
-        nn_model,
-        next(iter(train_loader))[0].to(device=device)
-    )
-    save_autograd_graph_from_module(
-        paths.logs.joinpath(f"{paths.name}_weight_model"),
-        weight_model,
-        torch.ones((1, 1), device=device)
-    )
-
-    if parameters.tensorboard:
-        nn_model.tensorboard.add_graph(train_loader)
-        # nn_model.tensorboard.add_graph(train_loader, model=weight_model)
-
     loss_accuracy = {
         "train_loss": [],
         "train_accuracy": [],
@@ -272,3 +256,84 @@ def run_model(parameters: RunParameters):
     with open(log_file, "a+", encoding="utf-8") as file:
         file.write("Run Completed Successfully...")
     print()
+
+
+def this_path():
+    return Path(__file__)
+
+
+def get_parameters(kwargs) -> RunParameters:
+    parameters = RunParameters()
+
+    if kwargs["color"].lower() == "true":
+        kwargs["color"] = True
+    elif kwargs["color"].lower() == "false":
+        kwargs["color"] = False
+    else:
+        raise ValueError("Invalid value for color")
+
+    if kwargs["activation_fn"].lower() == "gelu":
+        kwargs["activation_fn"] = ReLUGeLUInterpolation
+    elif kwargs["activation_fn"].lower() == "silu":
+        kwargs["activation_fn"] = ReLUSiLUInterpolation
+    else:
+        raise ValueError("Invalid value for activation_fn")
+
+    for key, value in kwargs.items():
+        if hasattr(parameters, key):
+            setattr(parameters, key, value)
+
+    select_class(parameters, 'norm_class', [None, Clamp])
+    select_class(parameters, 'precision_class', [None, ReducePrecision])
+    select_class(parameters, 'noise_class', [None, GaussianNoise])
+
+    check(parameters, "precision_class", "precision")
+    check(parameters, "noise_class", "leakage")
+
+    return parameters
+
+
+def run_parser():
+    parser = argparse.ArgumentParser()
+    parser.add_argument("--name", type=str, default=None)
+    parser.add_argument("--timestamp", type=str, default=None)
+    parser.add_argument("--data_folder", type=str, required=True)
+
+    parser.add_argument("--num_conv_layer", type=int, default=6)
+    parser.add_argument("--num_linear_layer", type=int, default=3)
+    parser.add_argument("--activation_fn", type=str, default="gelu")
+    parser.add_argument("--activation_i", type=float, default=1.0)
+    parser.add_argument("--activation_s", type=float, default=1.0)
+    parser.add_argument("--norm_class", type=str, default=None)
+    parser.add_argument("--precision_class", type=str, default=None)
+    parser.add_argument("--precision", type=int, default=None)
+    parser.add_argument("--noise_class", type=str, default=None)
+    parser.add_argument("--leakage", type=float, default=None)
+
+    parser.add_argument("--device", type=str, default=None)
+    parser.add_argument("--color", type=str, default=str(RunParameters.color))
+
+    parser.add_argument("--test_logs", action='store_true')
+    parser.set_defaults(test_logs=False)
+    parser.add_argument("--test_run", action='store_true')
+    parser.set_defaults(test_run=False)
+    parser.add_argument("--tensorboard", action='store_true')
+    parser.set_defaults(tensorboard=False)
+    parser.add_argument("--save_data", action='store_true')
+    parser.set_defaults(save_data=False)
+    kwargs = vars(parser.parse_known_args()[0])
+    print(json.dumps(kwargs))
+    print()
+
+    kwargs["data_folder"] = Path(kwargs["data_folder"]).absolute()
+    return kwargs
+
+
+def run():
+    kwargs = run_parser()
+    parameters = get_parameters(kwargs)
+    run_model(parameters)
+
+
+if __name__ == '__main__':
+    run()
