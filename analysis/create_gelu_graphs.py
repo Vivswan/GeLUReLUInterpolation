@@ -54,10 +54,10 @@ def apply_if_not_none(value, func):
 
 
 def sanitise_data(data):
-    data["train_loss"] = data["loss_accuracy"]["train_loss"][-1] * 100
-    data["test_loss"] = data["loss_accuracy"]["test_loss"][-1] * 100
-    data["min_train_loss"] = np.min(data["loss_accuracy"]["train_loss"]) * 100
-    data["min_test_loss"] = np.min(data["loss_accuracy"]["test_loss"]) * 100
+    data["train_loss"] = data["loss_accuracy"]["train_loss"][-1]
+    data["test_loss"] = data["loss_accuracy"]["test_loss"][-1]
+    data["min_train_loss"] = np.min(data["loss_accuracy"]["train_loss"])
+    data["min_test_loss"] = np.min(data["loss_accuracy"]["test_loss"])
 
     if "train_accuracy" in data["loss_accuracy"]:
         data["train_accuracy"] = data["loss_accuracy"]["train_accuracy"][-1] * 100
@@ -65,14 +65,10 @@ def sanitise_data(data):
         data["max_train_accuracy"] = np.max(data["loss_accuracy"]["train_accuracy"]) * 100
         data["max_test_accuracy"] = np.max(data["loss_accuracy"]["test_accuracy"]) * 100
     else:
-        data["train_ppl"] = data["loss_accuracy"]["train_ppl"][-1]
-        data["test_ppl"] = data["loss_accuracy"]["test_ppl"][-1]
-        data["min_train_ppl"] = np.min(data["loss_accuracy"]["train_ppl"])
-        data["min_test_ppl"] = np.min(data["loss_accuracy"]["test_ppl"])
-        data["train_log_loss"] = np.log(data["loss_accuracy"]["train_ppl"][-1])
-        data["test_log_loss"] = np.log(data["loss_accuracy"]["test_ppl"][-1])
-        data["min_train_log_loss"] = np.log(np.min(data["loss_accuracy"]["train_ppl"]))
-        data["min_test_log_loss"] = np.log(np.min(data["loss_accuracy"]["test_ppl"]))
+        data["train_log_loss"] = np.log(data["loss_accuracy"]["train_loss"][-1])
+        data["test_log_loss"] = np.log(data["loss_accuracy"]["test_loss"][-1])
+        data["min_train_log_loss"] = np.log(np.min(data["loss_accuracy"]["train_loss"]))
+        data["min_test_log_loss"] = np.log(np.min(data["loss_accuracy"]["test_loss"]))
 
     if "precision_y" not in data["parameter_log"]:
         data["parameter_log"]["precision_y"] = data["parameter_log"]["precision"]
@@ -370,7 +366,7 @@ def create_violin_figure(data_path, x_axis, y_axis, subsection=None, colorbar=No
 
 
 def create_line_figure(data_path, x_axis, y_axis, subsection=None, colorbar=None, filters=None,
-                       size_factor: Tuple[float, float] = 2, ci=1, name=None, min_vmin=None, max_vmax=None):
+                       size_factor: Tuple[float, float] = 2, ci=None, name=None, min_vmin=None, max_vmax=None):
     plot_data = get_plot_data(data_path, x_axis, y_axis, subsection=subsection, colorbar=colorbar, filters=filters)
 
     fig = pre_plot(size_factor)
@@ -384,10 +380,10 @@ def create_line_figure(data_path, x_axis, y_axis, subsection=None, colorbar=None
             min_vmin = min(plot_data["hue"])
         norm = matplotlib.colors.Normalize(vmin=min_vmin, vmax=max_vmax)
         scalar_map = plt.cm.ScalarMappable(cmap=color_map, norm=norm)
-        # cbar = plt.colorbar(scalar_map)
-        # cbar.ax.set_ylabel(to_title_case(colorbar))
+        cbar = plt.colorbar(scalar_map)
+        cbar.ax.set_ylabel(to_title_case(colorbar))
 
-    g = seaborn.lineplot(**plot_data, palette=color_map, linewidth=1, errorbar=('ci', ci))
+    g = seaborn.lineplot(**plot_data, palette=color_map, linewidth=1, errorbar=('ci', ci) if ci is not None else None, )
 
     plot_data["data_path"] = data_path
     plot_data["prefix"] = "l"
@@ -631,17 +627,66 @@ if __name__ == '__main__':
     # compile_data(f"{location}/{prefix}_fli1_results")
     # compile_data(f"{location}/tranformer_gni_results")
     # compile_data(f"{location}/tranformer_gpi_results")
-    # compile_data(f"{location}/tranformer_gpli_results")
+    # compile_data(f"{location}/transformer_run_gelu_pli")
+    # compile_data(f"{location}/vit_gelu_pli")
 
+    filters = {
+        # "parameter_log.color": "False",
+    }
     create_line_figure_max(
-        f"{location}/tranformer_gpli_results.pt",
+        f"{location}/vit_gelu_pli.pt",
         "parameter_log.activation_i",
-        "test_log_loss",
+        "max_test_accuracy",
         colorbar="parameter_log.leakage_w",
         name="73",
         size_factor=(6.5 * 1 / 3, 1.61803398874),
-        # filters={"parameter_log.leakage_w": 0.2},
+        filters=filters,
     )
+    create_line_figure_max(
+        f"{location}/vit_gelu_pli.pt",
+        "parameter_log.activation_i",
+        "max_test_accuracy",
+        colorbar="std_w",
+        name="73",
+        size_factor=(6.5 * 1 / 3, 1.61803398874),
+        filters=filters,
+    )
+    create_line_figure(
+        f"{location}/vit_gelu_pli.pt",
+        "parameter_log.activation_i",
+        "max_test_accuracy",
+        colorbar="parameter_log.leakage_w",
+        name="73",
+        size_factor=(6.5 * 1 / 3, 1.61803398874),
+        filters=filters,
+    )
+    create_line_figure(
+        f"{location}/vit_gelu_pli.pt",
+        "parameter_log.activation_i",
+        "max_test_accuracy",
+        colorbar="std_w",
+        name="73",
+        size_factor=(6.5 * 1 / 3, 1.61803398874),
+        filters=filters,
+    )
+    # create_line_figure_max(
+    #     f"{location}/test.pt",
+    #     "parameter_log.activation_i",
+    #     "min_test_loss",
+    #     colorbar="parameter_log.leakage_w",
+    #     name="73",
+    #     size_factor=(6.5 * 1 / 3, 1.61803398874),
+    #     filters=filters,
+    # )
+    # create_line_figure_max(
+    #     f"{location}/transformer_run_gelu_pli.pt",
+    #     "parameter_log.activation_i",
+    #     "test_log_loss",
+    #     colorbar="parameter_log.leakage_w",
+    #     name="73",
+    #     size_factor=(6.5 * 1 / 3, 1.61803398874),
+    #     # filters={"parameter_log.leakage_w": 0.2},
+    # )
 
     # filters = {
     #     # "bit_precision_w": 5,
