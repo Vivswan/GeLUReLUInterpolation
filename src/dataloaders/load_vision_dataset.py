@@ -7,15 +7,17 @@ from torchvision.transforms import transforms
 
 
 def get_vision_dataset_transformation(grayscale=True):
+    transformation = [
+        # transforms.RandomCrop(32, padding=4),
+        # transforms.Resize(32),
+        # transforms.RandomHorizontalFlip(),
+    ]
     if grayscale:
-        return transforms.Compose([
-            transforms.Grayscale(),
-            transforms.ToTensor(),
-        ])
+        transformation.append(transforms.Grayscale())
 
-    return transforms.Compose([
-        transforms.ToTensor(),
-    ])
+    transformation.append(transforms.ToTensor())
+    # transformation.append(transforms.Normalize((0.4914, 0.4822, 0.4465), (0.2023, 0.1994, 0.2010)))
+    return transforms.Compose(transformation)
 
 
 def load_vision_dataset(dataset: Type[VisionDataset], path, batch_size, is_cuda=False, grayscale=True) -> (
