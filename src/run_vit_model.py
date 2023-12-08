@@ -114,6 +114,7 @@ def train_on(
         optimizer: Optimizer,
         epoch: int,
         device: torch.device,
+        test_run: bool,
 ):
     model.train()
     total_loss = 0
@@ -150,6 +151,8 @@ def train_on(
                 f'\tLoss: {total_loss / total_size:.6f}'
                 f'\tAccuracy: {total_accuracy / total_size * 100:.2f}%'
             )
+        if test_run:
+            break
 
     total_loss /= total_size
     total_accuracy /= total_size
@@ -162,6 +165,7 @@ def test_on(
         criterion: nn.CrossEntropyLoss,
         accuracy_function: callable,
         device: torch.device,
+        test_run: bool,
 ):
     model.eval()
     total_loss = 0
@@ -177,6 +181,8 @@ def test_on(
             total_loss += loss.item() * len(inputs)
             total_accuracy += accuracy * len(inputs)
             total_size += len(inputs)
+            if test_run:
+                break
 
     total_loss /= total_size
     total_accuracy /= total_size
@@ -224,7 +230,7 @@ def run_model(parameters: ViTRunParameters):
 
     nn_model_params = parameters.nn_model_params
     weight_model_params = parameters.weight_model_params
-    nn_model_params["image_size"] = input_shape[-2:]
+    nn_model_params["image_size"] = input_shape[-1]
     nn_model_params["num_classes"] = len(classes)
 
     print(f"Creating Models...")
@@ -284,6 +290,7 @@ def run_model(parameters: ViTRunParameters):
             optimizer=optimizer,
             epoch=epoch,
             device=device,
+            test_run=parameters.test_run,
         )
         test_loss, test_accuracy = test_on(
             model=nn_model,
@@ -291,6 +298,7 @@ def run_model(parameters: ViTRunParameters):
             accuracy_function=accuracy_function,
             criterion=loss_function,
             device=device,
+            test_run=parameters.test_run,
         )
         scheduler.step()
 
