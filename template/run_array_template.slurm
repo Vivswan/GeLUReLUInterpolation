@@ -10,6 +10,7 @@
 #SBATCH --time=1-00:00:00
 #SBATCH --chdir="/ihome/nyoungblood/vis77/logs"
 #SBATCH --array=@@@array@@@
+#SBATCH --exclude=gpu-n[31,32]
 #SBATCH --requeue
 
 source ~/.bashrc

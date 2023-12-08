@@ -33,13 +33,10 @@ combination_dict = OrderedDict({
 })
 
 RUN_LIST = {
-    "gelu_ni": "depth:3,precision_class:None,noise_class:None,activation_fn:gelu",
-    "gelu_pi": "depth:3,norm_class:Clamp,precision_class:ReducePrecision,noise_class:None,activation_fn:gelu",
-    "gelu_pli": "depth:3,norm_class:Clamp,precision_class:ReducePrecision,noise_class:GaussianNoise,activation_fn:gelu",
-
-    "silu_ni": "depth:3,precision_class:None,noise_class:None,activation_fn:silu",
-    "silu_pi": "depth:3,norm_class:Clamp,precision_class:ReducePrecision,noise_class:None,activation_fn:silu",
-    "silu_pli": "depth:3,norm_class:Clamp,precision_class:ReducePrecision,noise_class:GaussianNoise,activation_fn:silu",
+    "gelu_n": "depth:3,norm_class:Clamp,precision_class:ReducePrecision,noise_class:GaussianNoise,activation_fn:gelu",
+    "silu_n": "depth:3,norm_class:Clamp,precision_class:ReducePrecision,noise_class:GaussianNoise,activation_fn:silu",
+    "gelu_d": "leakage:0.8,norm_class:Clamp,precision_class:ReducePrecision,noise_class:GaussianNoise,activation_fn:gelu",
+    "silu_d": "leakage:0.8,norm_class:Clamp,precision_class:ReducePrecision,noise_class:GaussianNoise,activation_fn:silu",
 }
 
 
