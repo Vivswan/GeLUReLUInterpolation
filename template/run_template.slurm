@@ -1,6 +1,6 @@
 #!/bin/bash
 #SBATCH --job-name=run_@@@RunScript@@@_@@@run_combination@@@
-#SBATCH --output=slurm_%x_%A_%a.log
+#SBATCH --output=slurm_%x_%A.log
 #SBATCH --nodes=1
 #SBATCH --tasks-per-node=1
 #SBATCH --cpus-per-task=16
@@ -58,6 +58,7 @@ cd "${SlurmScratchDirectory}" || exit
 echo ""
 echo "####################################### Variables #######################################"
 echo ""
+echo "CUDA_VISIBLE_DEVICES = ${CUDA_VISIBLE_DEVICES}"
 echo "SlurmScratchName = ${SlurmScratchName}"
 echo "StorageDirectory = ${StorageDirectory}"
 echo "SlurmScratchDirectory = ${SlurmScratchDirectory}"
@@ -71,6 +72,7 @@ echo ""
 
 srun python3 @@@RunScript@@@.py \
 --run_combination @@@run_combination@@@ \
+--memory_required @@@memory_required@@@ \
 --run \
 --data_folder ./_results \
 --tensorboard \

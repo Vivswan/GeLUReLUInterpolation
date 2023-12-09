@@ -5,6 +5,7 @@ import inspect
 import itertools
 import math
 import os
+import random
 import shutil
 import subprocess
 import time
@@ -35,7 +36,7 @@ combination_dict = OrderedDict({
 })
 
 RUN_LIST = {
-    "gelu_n": "depth:3,norm_class:Clamp,precision_class:ReducePrecision,noise_class:GaussianNoise,activation_fn:gelu",
+    # "gelu_n": "depth:3,norm_class:Clamp,precision_class:ReducePrecision,noise_class:GaussianNoise,activation_fn:gelu",
     "silu_n": "depth:3,norm_class:Clamp,precision_class:ReducePrecision,noise_class:GaussianNoise,activation_fn:silu",
     "gelu_d": "leakage:0.8,norm_class:Clamp,precision_class:ReducePrecision,noise_class:GaussianNoise,activation_fn:gelu",
     "silu_d": "leakage:0.8,norm_class:Clamp,precision_class:ReducePrecision,noise_class:GaussianNoise,activation_fn:silu",
@@ -59,10 +60,19 @@ def prepare_data_folder(folder_path):
 
 
 def run_command(command):
-    command, data_folder, index = command
+    command, data_folder, run_combination, index = command
 
-    run_check_file = Path()
-    new_data_folder = Path(data_folder).parent.joinpath(f"_result_{index}")
+    print(f"Trying to run {run_combination}::{index}")
+    run_check_file = Path(__file__).parent.joinpath(f"_crc_slurm/run_{run_combination}/run_{index}")
+    try:
+        t = run_check_file.parent.joinpath(f"run_{index}_running")
+        run_check_file.rename(t)
+        run_check_file = t
+    except FileNotFoundError:
+        return
+
+    print(f"Running {run_combination}::{index}")
+    new_data_folder = Path(data_folder).parent.joinpath(f"_result_{run_combination}_{index}")
     shutil.copytree(data_folder, new_data_folder)
     data_folder = new_data_folder
 
@@ -106,6 +116,13 @@ def run_command(command):
 
         out.write(f"\n\n{rc}")
 
+    print(f"Finished {run_combination}::{index}")
+    targz = Path(f"{data_folder}.tar.gz")
+    shutil.make_archive(data_folder, 'gztar', data_folder)
+    shutil.move(targz, Path(f"~/storage/{targz.name}").expanduser())
+    shutil.rmtree(data_folder)
+    targz.unlink()
+    run_check_file.unlink()
 
 def create_command_list(extra_arg="", select=""):
     cd_copy = copy.deepcopy(combination_dict)
@@ -164,7 +181,7 @@ def run_combination_main():
     parser = argparse.ArgumentParser()
     parser.add_argument("--data_folder", type=str)
     parser.add_argument("--run_combination", type=str)
-    parser.add_argument("--memory_required", type=int)
+    parser.add_argument("--memory_required", type=float)
     parser.set_defaults(single_run=False)
     me = parser.add_mutually_exclusive_group(required=True)
     me.add_argument("--create", action='store_true')
@@ -192,8 +209,9 @@ def run_combination_main():
     prepare_data_folder(data_folder)
 
     command_list = create_command_list(extra_arg, RUN_LIST[kwargs['run_combination']])
-    command_list = [(x, str(data_folder), i) for i, x in enumerate(command_list)]
-
+    command_list = [(x, str(data_folder), kwargs['run_combination'], i) for i, x in enumerate(command_list)]
+    random.shuffle(command_list)
+    
     with ThreadPool(num_process) as pool:
         pool.map(run_command, command_list)
 
@@ -213,6 +231,7 @@ def create_slurm_scripts():
         output_path.joinpath(f"run_{i}.slurm").write_text(
             template_file
             .replace("@@@RunScript@@@", Path(__file__).name.split(".")[0])
+            .replace("@@@memory_required@@@", "4.5")
             .replace("@@@run_combination@@@", i),
             encoding="utf-8"
         )
