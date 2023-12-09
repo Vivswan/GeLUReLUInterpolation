@@ -3,6 +3,7 @@ import copy
 import hashlib
 import inspect
 import itertools
+import math
 import os
 import shutil
 import subprocess
@@ -11,6 +12,7 @@ from collections import OrderedDict
 from multiprocessing.pool import ThreadPool
 from pathlib import Path
 
+import torch
 import torchvision
 from analogvnn.nn.noise.GaussianNoise import GaussianNoise
 from analogvnn.nn.normalize.Clamp import *
@@ -57,7 +59,13 @@ def prepare_data_folder(folder_path):
 
 
 def run_command(command):
-    data_folder, command = command
+    command, data_folder, index = command
+
+    run_check_file = Path()
+    new_data_folder = Path(data_folder).parent.joinpath(f"_result_{index}")
+    shutil.copytree(data_folder, new_data_folder)
+    data_folder = new_data_folder
+
     runtime = Path(data_folder).joinpath("runtime")
     hash_id = hashlib.sha256(str(command).encode("utf-8")).hexdigest()
     timestamp = f"{int(time.time() * 1000)}"
@@ -74,7 +82,7 @@ def run_command(command):
         command += f" --name {hash_id}"
     else:
         hash_id = command.split("--name")[-1]
-        hash_id = hash_id.strip().split(" ")[0]
+        hash_id = hash_id.strip().split(" ")[0][:8]
 
     filename = f"{timestamp}_{hash_id}"
     out_file = runtime.joinpath(f"{filename}.log")
@@ -156,68 +164,64 @@ def run_combination_main():
     parser = argparse.ArgumentParser()
     parser.add_argument("--data_folder", type=str)
     parser.add_argument("--run_combination", type=str)
-    parser.add_argument("--run_index", type=int, default=-1)
-    parser.add_argument("--single_run", action='store_true')
+    parser.add_argument("--memory_required", type=int)
     parser.set_defaults(single_run=False)
-    parser.add_argument("--create", action='store_true')
-    parser.set_defaults(create=False)
+    me = parser.add_mutually_exclusive_group(required=True)
+    me.add_argument("--create", action='store_true')
+    me.add_argument("--run", action='store_true')
+    me.add_argument("--single_run", action='store_true')
     all_arguments = parser.parse_known_args()
 
     if all_arguments[0].create:
-        create_slurm_scripts()
-        for name, value in RUN_LIST.items():
-            size = len(create_command_list('', value))
-            print(f"{name}: {size}, {size * 5 / 60 / 100}")
-        print()
-        return
+        return create_slurm_scripts()
 
-    print(all_arguments)
     kwargs = vars(all_arguments[0])
     extra_arg = ""
     for i in all_arguments[1]:
-        if " " in i:
-            extra_arg += f' "{i}"'
-        else:
-            extra_arg += f' {i}'
+        extra_arg += f' "{i}"' if " " in i else f' {i}'
 
-    print(f"data_folder: {kwargs['data_folder']}")
+    data_folder = Path(kwargs['data_folder']).absolute()
+    cuda_mem = torch.cuda.mem_get_info()[1] / 1024 / 1024 / 1024 if torch.cuda.is_available() else 0
+    num_process = max(math.floor(cuda_mem / kwargs['memory_required']), 1)
+    if kwargs['single_run']:
+        num_process = 1
+
+    print(f"data_folder: {data_folder}")
     print(f"run_combination: {kwargs['run_combination']}")
-    print(f"run_index: {kwargs['run_index']}")
-    prepare_data_folder(kwargs['data_folder'])
-
-    if kwargs['run_index'] < 1:
-        raise Exception("run_index must be >= 1")
+    print(f"cuda_mem: {cuda_mem:.2f}GB")
+    prepare_data_folder(data_folder)
 
     command_list = create_command_list(extra_arg, RUN_LIST[kwargs['run_combination']])
-    command_list = [command_list[kwargs['run_index'] - 1]]
-    command_list = [(kwargs['data_folder'], x) for x in command_list]
+    command_list = [(x, str(data_folder), i) for i, x in enumerate(command_list)]
 
-    with ThreadPool(1) as pool:
+    with ThreadPool(num_process) as pool:
         pool.map(run_command, command_list)
 
 
 def create_slurm_scripts():
     output_path = Path(__file__).parent.joinpath("_crc_slurm")
     if output_path.exists():
-        shutil.rmtree(output_path)
-    output_path.mkdir()
+        for f in output_path.iterdir():
+            if f.is_file():
+                f.unlink()
+            else:
+                shutil.rmtree(f)
+    output_path.mkdir(parents=True, exist_ok=True)
 
-    template_file = Path(__file__).parent.joinpath("template/run_array_template.slurm").read_text(encoding="utf-8")
+    template_file = Path(__file__).parent.joinpath("template/run_template.slurm").read_text(encoding="utf-8")
     for i in RUN_LIST:
-        end = len(create_command_list('', RUN_LIST[i]))
-        for j in range(1, end + 2, 750):
-            r_start = j
-            r_end = min(j + 750 - 1, end)
-            if r_end <= r_start:
-                continue
-            with open(f"_crc_slurm/run_{i}_{j}.slurm", "w", encoding="utf-8") as slurm_file:
-                slurm_file.write(
-                    template_file
-                    .replace("@@@RunScript@@@", Path(__file__).name.split(".")[0])
-                    .replace("@@@run_combination@@@", i)
-                    .replace("@@@array@@@", f"{0}-{r_end - r_start}")
-                    .replace("@@@ArrayTaskIdOffset@@@", f"{r_start}")
-                )
+        output_path.joinpath(f"run_{i}.slurm").write_text(
+            template_file
+            .replace("@@@RunScript@@@", Path(__file__).name.split(".")[0])
+            .replace("@@@run_combination@@@", i),
+            encoding="utf-8"
+        )
+        runs_folder = output_path.joinpath(f"run_{i}")
+        runs_folder.mkdir(parents=True, exist_ok=True)
+        size = len(create_command_list('', RUN_LIST[i]))
+        print(f"{i}: {size}, {size * 5 / 60 / 100}")
+        for j in range(0, size):
+            runs_folder.joinpath(f"run_{j}").write_text("")
 
 
 if __name__ == '__main__':

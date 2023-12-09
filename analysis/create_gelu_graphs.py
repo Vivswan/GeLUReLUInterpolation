@@ -527,8 +527,7 @@ def create_convergence_figure(data_path, size_factor):
     data_path = Path(data_path)
     test_accuracies = {}
     norm_classes = {}
-    with open(data_path, "r", encoding="utf-8") as f:
-        data = json.load(f)
+    data = torch.load(data_path)
 
     for i, (run_name, run_data) in enumerate(data.items()):
         loss_accuracy = run_data["loss_accuracy"]
@@ -628,13 +627,15 @@ if __name__ == '__main__':
     # compile_data(f"{location}/tranformer_gni_results")
     # compile_data(f"{location}/tranformer_gpi_results")
     # compile_data(f"{location}/transformer_run_gelu_pli")
-    # compile_data(f"{location}/vit_gelu_pli")
+    # compile_data(f"{location}/vit_gelu_n")
+
+    create_convergence_figure(f"{location}/vit_gelu_n.pt", size_factor=(6.5 * 1 / 3, 1.61803398874))
 
     filters = {
         # "parameter_log.color": "False",
     }
     create_line_figure_max(
-        f"{location}/vit_gelu_pli.pt",
+        f"{location}/vit_gelu_n.pt",
         "parameter_log.activation_i",
         "max_test_accuracy",
         colorbar="parameter_log.leakage_w",
@@ -643,7 +644,7 @@ if __name__ == '__main__':
         filters=filters,
     )
     create_line_figure_max(
-        f"{location}/vit_gelu_pli.pt",
+        f"{location}/vit_gelu_n.pt",
         "parameter_log.activation_i",
         "max_test_accuracy",
         colorbar="std_w",
@@ -652,7 +653,7 @@ if __name__ == '__main__':
         filters=filters,
     )
     create_line_figure(
-        f"{location}/vit_gelu_pli.pt",
+        f"{location}/vit_gelu_n.pt",
         "parameter_log.activation_i",
         "max_test_accuracy",
         colorbar="parameter_log.leakage_w",
@@ -661,7 +662,7 @@ if __name__ == '__main__':
         filters=filters,
     )
     create_line_figure(
-        f"{location}/vit_gelu_pli.pt",
+        f"{location}/vit_gelu_n.pt",
         "parameter_log.activation_i",
         "max_test_accuracy",
         colorbar="std_w",
