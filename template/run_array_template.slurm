@@ -3,9 +3,9 @@
 #SBATCH --output=slurm_%x_%A_%a.log
 #SBATCH --nodes=1
 #SBATCH --tasks-per-node=1
-#SBATCH --cpus-per-task=3
+#SBATCH --cpus-per-task=2
 #SBATCH --cluster=gpu
-#SBATCH --partition=gtx1080,a100,a100_nvlink
+#SBATCH --partition=gtx1080
 #SBATCH --gres=gpu:1
 #SBATCH --time=1-00:00:00
 #SBATCH --chdir="/ihome/nyoungblood/vis77/logs"

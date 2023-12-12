@@ -20,20 +20,20 @@ from natsort import natsorted, ns
 from src.run_vit_model import this_path
 
 combination_dict = OrderedDict({
-    "color": [False, True],
-    "norm_class": [None, Clamp],
-    "precision_class": [None, ReducePrecision],
-    "noise_class": [None, GaussianNoise],
+    "color": [False],
+    "norm_class": [Clamp],
+    "precision_class": [ReducePrecision],
+    "noise_class": [GaussianNoise],
 
     "depth": [1, 2, 3, 4, 5, 6],
     "activation_fn": ["gelu", "silu"],
     "activation_i": [0, 0.1, 0.2, 0.3, 0.4, 0.5, 0.6, 0.7, 0.8, 0.9, 1],
-    "precision": [None, 4, 8, 16, 32, 64],
-    "leakage": [None, 0.2, 0.3, 0.4, 0.5, 0.6, 0.7, 0.8],
+    "precision": [4, 8, 16, 32, 64],
+    "leakage": [0.2, 0.3, 0.4, 0.5, 0.6, 0.7, 0.8],
 })
 
 RUN_LIST = {
-    "gelu_n": "depth:3,norm_class:Clamp,precision_class:ReducePrecision,noise_class:GaussianNoise,activation_fn:gelu",
+    # "gelu_n": "depth:3,norm_class:Clamp,precision_class:ReducePrecision,noise_class:GaussianNoise,activation_fn:gelu",
     "silu_n": "depth:3,norm_class:Clamp,precision_class:ReducePrecision,noise_class:GaussianNoise,activation_fn:silu",
     "gelu_d": "leakage:0.8,norm_class:Clamp,precision_class:ReducePrecision,noise_class:GaussianNoise,activation_fn:gelu",
     "silu_d": "leakage:0.8,norm_class:Clamp,precision_class:ReducePrecision,noise_class:GaussianNoise,activation_fn:silu",
