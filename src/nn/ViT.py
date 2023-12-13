@@ -7,6 +7,8 @@ from einops import rearrange, repeat
 from einops.layers.torch import Rearrange
 from torch import nn
 
+from src.nn.ReGLUGeGLUInterpolation import ReGLUGeGLUInterpolation
+
 
 # helpers
 
@@ -41,7 +43,7 @@ class FeedForward(nn.Module):
             nn.Linear(dim, mlp_dim),
             activation_fn(activation_i, activation_s, activation_alpha),
             nn.Dropout(dropout),
-            nn.Linear(mlp_dim, dim),
+            nn.Linear(int(mlp_dim / 2) if activation_fn == ReGLUGeGLUInterpolation else mlp_dim, dim),
             nn.Dropout(dropout),
         )
 

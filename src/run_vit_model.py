@@ -25,6 +25,7 @@ from src.dataloaders.load_vision_dataset import load_vision_dataset
 from src.fn.cross_entropy_loss_accuracy import cross_entropy_loss_accuracy
 from src.fn.data_dirs import data_dirs
 from src.fn.misc import select_class, check
+from src.nn.ReGLUGeGLUInterpolation import ReGLUGeGLUInterpolation
 from src.nn.ReLUGeLUInterpolation import ReLUGeLUInterpolation
 from src.nn.ReLUSiLUInterpolation import ReLUSiLUInterpolation
 from src.nn.ViT import ViT
@@ -365,6 +366,8 @@ def get_parameters(kwargs) -> ViTRunParameters:
         kwargs["activation_fn"] = ReLUGeLUInterpolation
     elif kwargs["activation_fn"].lower() == "silu":
         kwargs["activation_fn"] = ReLUSiLUInterpolation
+    elif kwargs["activation_fn"].lower() == "gege":
+        kwargs["activation_fn"] = ReGLUGeGLUInterpolation
     else:
         raise ValueError("Invalid value for activation_fn")
 
