@@ -24,7 +24,8 @@ class ReGLUGeGLUInterpolation(Activation):
         a, b = x.chunk(2, dim=-1)
         relu = torch.maximum(b * self.alpha, b)
         gelu = 0.5 * b * (1 + torch.erf(b * self.scaling_factor / np.sqrt(2)))
-        return a * (relu + self.interpolate_factor * (gelu - relu))
+        result = relu + self.interpolate_factor * (gelu - relu)
+        return a * result
 
     def backward(self, grad_output: Optional[Tensor]) -> Optional[Tensor]:
         x = self.inputs
