@@ -29,7 +29,7 @@ combination_dict = OrderedDict({
     "noise_class": [None, GaussianNoise],
 
     "depth": [1, 2, 3, 4, 5, 6],
-    "activation_fn": ["gelu", "silu"],
+    "activation_fn": ["gelu", "silu", 'gege'],
     "activation_i": [0, 0.1, 0.2, 0.3, 0.4, 0.5, 0.6, 0.7, 0.8, 0.9, 1],
     "precision": [None, 4, 8, 16, 32, 64],
     "leakage": [None, 0.2, 0.3, 0.4, 0.5, 0.6, 0.7, 0.8],
@@ -37,6 +37,7 @@ combination_dict = OrderedDict({
 
 RUN_LIST = {
     # "gelu_n": "depth:3,norm_class:Clamp,precision_class:ReducePrecision,noise_class:GaussianNoise,activation_fn:gelu",
+    "gege_n": "depth:3,norm_class:Clamp,precision_class:ReducePrecision,noise_class:GaussianNoise,activation_fn:gege",
     "silu_n": "depth:3,norm_class:Clamp,precision_class:ReducePrecision,noise_class:GaussianNoise,activation_fn:silu",
     "gelu_d": "leakage:0.8,norm_class:Clamp,precision_class:ReducePrecision,noise_class:GaussianNoise,activation_fn:gelu",
     "silu_d": "leakage:0.8,norm_class:Clamp,precision_class:ReducePrecision,noise_class:GaussianNoise,activation_fn:silu",
@@ -61,18 +62,21 @@ def prepare_data_folder(folder_path):
 
 def run_command(command):
     command, data_folder, run_combination, index = command
+    data_folder = Path(data_folder).absolute()
+    base_path = data_folder.parent
 
     print(f"Trying to run {run_combination}::{index}")
     run_check_file = Path(__file__).parent.joinpath(f"_crc_slurm/run_{run_combination}/run_{index}")
     try:
-        t = run_check_file.parent.joinpath(f"run_{index}_running")
+        t = run_check_file.parent.joinpath(f"current_run_{index}.log")
         run_check_file.rename(t)
         run_check_file = t
     except FileNotFoundError:
-        return
+        return 
 
     print(f"Running {run_combination}::{index}")
-    new_data_folder = Path(data_folder).parent.joinpath(f"_result_{run_combination}_{index}")
+    random_number = random.randint(0, 1000000)
+    new_data_folder = base_path.joinpath(f"_result_{run_combination}_{index}_{random_number}")
     shutil.copytree(data_folder, new_data_folder)
     data_folder = new_data_folder
 
@@ -95,33 +99,41 @@ def run_command(command):
         hash_id = hash_id.strip().split(" ")[0][:8]
 
     filename = f"{timestamp}_{hash_id}"
-    out_file = runtime.joinpath(f"{filename}.log")
-
     print(f"Running {filename} :: {command}")
-    with open(out_file, "w+", encoding="utf-8") as out:
-        out.write(command + "\n")
-        out.write(f"Running {filename} :: {command}\n\n")
+    rc = -1
+    while rc != 0:
+        with open(run_check_file, "w+", encoding="utf-8") as out:
+            out.write(command + "\n")
+            out.write(f"Running {filename} :: {command}\n\n")
 
-        p = subprocess.Popen(command, shell=True, stdout=out, stderr=out)
-        p.wait()
-        rc = p.returncode
+            p = subprocess.Popen(command, shell=True, stdout=out, stderr=out)
+            p.wait()
+            rc = p.returncode
 
-        out.write(f"\n\n")
-        if rc == 0:
-            out.write(f"Success {p.pid} :: {filename} :: {command}")
-            print(f"Success {p.pid} :: {filename} :: {command}")
-        else:
-            out.write(f"Failed  {p.pid} :: {filename} :: {rc} :: {command}")
-            print(f"Failed  {p.pid} :: {filename} :: {rc} :: {command}")
+            out.write(f"\n\n")
+            if rc == 0:
+                out.write(f"Success {p.pid} :: {filename} :: {command}")
+                print(f"Success {p.pid} :: {filename} :: {command}")
+            else:
+                out.write(f"Failed  {p.pid} :: {filename} :: {rc} :: {command}")
+                print(f"Failed  {p.pid} :: {filename} :: {rc} :: {command}")
+                
+            out.write(f"\n\n{rc}")
 
-        out.write(f"\n\n{rc}")
 
+    t = run_check_file.parent.joinpath(f"completed_run_{index}.log")
+    run_check_file.rename(t)
+    run_check_file = t
     print(f"Finished {run_combination}::{index}")
-    targz = Path(f"{data_folder}.tar.gz")
+    runtime.joinpath(f"{filename}.log").write_text(run_check_file.read_text(encoding="utf-8"), encoding="utf-8")
+    targz = base_path.joinpath(f"{data_folder.name}.tar.gz")
+
+    shutil.rmtree(data_folder.joinpath("datasets"))
     shutil.make_archive(data_folder, 'gztar', data_folder)
     shutil.move(targz, Path(f"~/storage/{targz.name}").expanduser())
     shutil.rmtree(data_folder)
     targz.unlink()
+    
     run_check_file.unlink()
 
 def create_command_list(extra_arg="", select=""):
@@ -231,7 +243,7 @@ def create_slurm_scripts():
         output_path.joinpath(f"run_{i}.slurm").write_text(
             template_file
             .replace("@@@RunScript@@@", Path(__file__).name.split(".")[0])
-            .replace("@@@memory_required@@@", "4.5")
+            .replace("@@@memory_required@@@", "9")
             .replace("@@@run_combination@@@", i),
             encoding="utf-8"
         )

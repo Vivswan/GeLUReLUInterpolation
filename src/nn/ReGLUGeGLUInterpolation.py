@@ -6,7 +6,7 @@ from analogvnn.nn.activation.Activation import Activation
 from torch import nn, Tensor
 
 
-class ReLUGeLUInterpolation(Activation):
+class ReGLUGeGLUInterpolation(Activation):
     """
     References:
         Shazeer et al., "GLU Variants Improve Transformer," 2020.
@@ -14,7 +14,7 @@ class ReLUGeLUInterpolation(Activation):
     """
 
     def __init__(self, interpolate_factor: float, scaling_factor: float, alpha: float = 0):
-        super(ReLUGeLUInterpolation, self).__init__()
+        super(ReGLUGeGLUInterpolation, self).__init__()
         self.alpha = nn.Parameter(torch.tensor(alpha), requires_grad=False)
         self.interpolate_factor = nn.Parameter(torch.tensor(interpolate_factor), requires_grad=False)
         self.scaling_factor = nn.Parameter(torch.tensor(scaling_factor), requires_grad=False)

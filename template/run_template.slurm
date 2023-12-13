@@ -5,7 +5,7 @@
 #SBATCH --tasks-per-node=1
 #SBATCH --cpus-per-task=16
 #SBATCH --cluster=gpu
-#SBATCH --partition=a100
+#SBATCH --partition=a100,a100_nvlink
 #SBATCH --gres=gpu:1
 #SBATCH --time=2-00:00:00
 #SBATCH --chdir="/ihome/nyoungblood/vis77/logs"
