@@ -20,7 +20,7 @@ from natsort import natsorted, ns
 from src.run_vit_model import this_path
 
 combination_dict = OrderedDict({
-    "color": [False],
+    "color": [True, False],
     "norm_class": [Clamp],
     "precision_class": [ReducePrecision],
     "noise_class": [GaussianNoise],
@@ -206,9 +206,9 @@ def create_slurm_scripts():
     template_file = Path(__file__).parent.joinpath("template/run_array_template.slurm").read_text(encoding="utf-8")
     for i in RUN_LIST:
         end = len(create_command_list('', RUN_LIST[i]))
-        for j in range(1, end + 2, 750):
+        for j in range(1, end + 2, 900):
             r_start = j
-            r_end = min(j + 750 - 1, end)
+            r_end = min(j + 900 - 1, end)
             if r_end <= r_start:
                 continue
             with open(f"_crc_slurm/run_{i}_{j}.slurm", "w", encoding="utf-8") as slurm_file:

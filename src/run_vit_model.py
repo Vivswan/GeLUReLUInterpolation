@@ -58,7 +58,7 @@ class ViTRunParameters:
     dataset: Type[VisionDataset] = torchvision.datasets.CIFAR10
     color: bool = True
     batch_size: int = 512
-    epochs: int = 200
+    epochs: int = 150
 
     device: Optional[torch.device] = None
     test_logs: bool = False
