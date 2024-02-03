@@ -19,16 +19,18 @@ class ReLUGeLUInterpolation(Activation):
         return relu + self.interpolate_factor * (gelu - relu)
 
     def backward(self, grad_output: Optional[Tensor]) -> Optional[Tensor]:
-        x = self.inputs
+        return grad_output * self.backward_inputs(self.inputs)
+
+    def backward_inputs(self, x):
         grad_gelu = (
                 0.5 * (1 + torch.erf(x * self.scaling_factor / np.sqrt(2)))
                 + np.sqrt(1 / (2 * np.pi)) * x * self.scaling_factor
                 * torch.exp(-torch.pow(x * self.scaling_factor, 2) / 2)
         )
 
-        grad_relu = (x < 0).type(torch.float) * self.alpha + (x >= 0).type(torch.float)
+        grad_relu = (x <= 0).type(torch.float) * self.alpha + (x > 0).type(torch.float)
         grad = grad_relu + self.interpolate_factor * (grad_gelu - grad_relu)
-        return grad_output * grad
+        return grad
 
     def extra_repr(self) -> str:
         return f"interpolate_factor={self.interpolate_factor}, scaling_factor={self.scaling_factor}"
