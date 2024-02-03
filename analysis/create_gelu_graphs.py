@@ -313,8 +313,8 @@ def post_plot(plot_data, y_lim=(0, 10000)):
 
     name = f"{plot_data['prefix']} - {run_name} - {x_axis_title} vs {y_axis_title}{filter_text}{colorbar_text}{subsection_text}"
 
-    # plot_data["fig"].savefig(f'{location}/{name}.pdf', dpi=plot_data["fig"].dpi, transparent=True)
-    # plot_data["fig"].savefig(f'{location}/{name}.svg', dpi=plot_data["fig"].dpi, transparent=True)
+    plot_data["fig"].savefig(f'{location}/{name}.pdf', dpi=plot_data["fig"].dpi, transparent=True)
+    plot_data["fig"].savefig(f'{location}/{name}.svg', dpi=plot_data["fig"].dpi, transparent=True)
     plot_data["fig"].savefig(f'{location}/{name}.png', dpi=plot_data["fig"].dpi, transparent=True)
 
     plt.close('all')
@@ -611,7 +611,7 @@ def create_convergence_figure(data_path, size_factor):
 
 if __name__ == '__main__':
     location = r"C:\X"
-    prefix = "gelu"
+    prefix = "silu"
     # compile_data(f"{location}/{prefix}_ns_results")
     # compile_data(f"{location}/{prefix}_ni_results")
     # compile_data(f"{location}/{prefix}_ps_results")
@@ -627,182 +627,95 @@ if __name__ == '__main__':
     # compile_data(f"{location}/{prefix}_fli1_results")
     # compile_data(f"{location}/tranformer_gni_results")
     # compile_data(f"{location}/tranformer_gpi_results")
-    # compile_data(f"{location}/transformer_run_gelu_pli")
-    # compile_data(f"{location}/vit_gelu_pli")
+    # compile_data(f"{location}/gelu_pli_results")
+    # compile_data(f"{location}/vit_gelu_4n")
+    # compile_data(f"{location}/vit_silu_4n")
+    # compile_data(f"{location}/vit_gege_4n")
+    # compile_data(f"{location}/vit_silu_d")
+    # compile_data(f"{location}/vit_gelu_d")
 
-    filters = {
-        # "parameter_log.color": "False",
-    }
     create_line_figure_max(
-        f"{location}/vit_gelu_pli.pt",
+        f"{location}/gelu_conv_pls_results.pt",
+        "parameter_log.activation_s",
+        "max_test_accuracy",
+        colorbar="parameter_log.leakage_w",
+        name="11",
+        size_factor=(6.5 * 1 / 3, 1.61803398874),
+    )
+    create_line_figure_max(
+        f"{location}/gelu_conv_pli_results.pt",
         "parameter_log.activation_i",
         "max_test_accuracy",
         colorbar="parameter_log.leakage_w",
-        name="73",
+        name="12",
         size_factor=(6.5 * 1 / 3, 1.61803398874),
-        filters=filters,
     )
     create_line_figure_max(
-        f"{location}/vit_gelu_pli.pt",
-        "parameter_log.activation_i",
-        "max_test_accuracy",
-        colorbar="std_w",
-        name="73",
-        size_factor=(6.5 * 1 / 3, 1.61803398874),
-        filters=filters,
-    )
-    create_line_figure(
-        f"{location}/vit_gelu_pli.pt",
+        f"{location}/silu_conv_pli_results.pt",
         "parameter_log.activation_i",
         "max_test_accuracy",
         colorbar="parameter_log.leakage_w",
-        name="73",
+        name="13",
         size_factor=(6.5 * 1 / 3, 1.61803398874),
-        filters=filters,
     )
-    create_line_figure(
-        f"{location}/vit_gelu_pli.pt",
+
+    create_line_figure_max(
+        f"{location}/gelu_conv_cli1_results.pt",
         "parameter_log.activation_i",
         "max_test_accuracy",
-        colorbar="std_w",
-        name="73",
+        colorbar="parameter_log.num_conv_layer",
+        name="21",
         size_factor=(6.5 * 1 / 3, 1.61803398874),
-        filters=filters,
     )
-    # create_line_figure_max(
-    #     f"{location}/test.pt",
-    #     "parameter_log.activation_i",
-    #     "min_test_loss",
-    #     colorbar="parameter_log.leakage_w",
-    #     name="73",
-    #     size_factor=(6.5 * 1 / 3, 1.61803398874),
-    #     filters=filters,
-    # )
-    # create_line_figure_max(
-    #     f"{location}/transformer_run_gelu_pli.pt",
-    #     "parameter_log.activation_i",
-    #     "test_log_loss",
-    #     colorbar="parameter_log.leakage_w",
-    #     name="73",
-    #     size_factor=(6.5 * 1 / 3, 1.61803398874),
-    #     # filters={"parameter_log.leakage_w": 0.2},
-    # )
 
-    # filters = {
-    #     # "bit_precision_w": 5,
-    # }
-    # create_line_figure_max(
-    #     f"{location}/{prefix}_conv_pli_results.pt",
-    #     "parameter_log.activation_i",
-    #     "max_test_accuracy",
-    #     colorbar="parameter_log.leakage_w",
-    #     name="73",
-    #     size_factor=(6.5 * 1 / 3, 1.61803398874),
-    #     filters=filters,
-    # )
-    # create_line_figure_max(
-    #     f"{location}/{prefix}_conv_pls_results.pt",
-    #     "parameter_log.activation_s",
-    #     "max_test_accuracy",
-    #     colorbar="parameter_log.leakage_w",
-    #     name="73",
-    #     size_factor=(6.5 * 1 / 3, 1.61803398874),
-    #     filters=filters,
-    # )
-    # create_line_figure_max(
-    #     f"{location}/{prefix}_conv_pli_results.pt",
-    #     "parameter_log.activation_i",
-    #     "max_test_accuracy",
-    #     colorbar="std_w",
-    #     name="73",
-    #     max_vmax=0.1,
-    #     size_factor=(6.5 * 1 / 3, 1.61803398874),
-    #     filters=filters,
-    # )
-    # create_line_figure_max(
-    #     f"{location}/{prefix}_conv_pls_results.pt",
-    #     "parameter_log.activation_s",
-    #     "max_test_accuracy",
-    #     colorbar="std_w",
-    #     name="73",
-    #     size_factor=(6.5 * 1 / 3, 1.61803398874),
-    #     max_vmax=0.1,
-    #     filters=filters,
-    # )
-    # create_line_figure_max(
-    #     f"{location}/{prefix}_conv_cli1_results.pt",
-    #     "parameter_log.activation_i",
-    #     "max_test_accuracy",
-    #     colorbar="parameter_log.num_conv_layer",
-    #     name="73",
-    #     size_factor=(6.5 * 1 / 3, 1.61803398874),
-    #     filters=filters,
-    # )
-    # create_line_figure_max(
-    #     f"{location}/{prefix}_conv_cli_results.pt",
-    #     "parameter_log.activation_i",
-    #     "max_test_accuracy",
-    #     colorbar="parameter_log.num_conv_layer",
-    #     name="73",
-    #     size_factor=(6.5 * 1 / 3, 1.61803398874),
-    #     filters=filters,
-    # )
-    # create_line_figure_max(
-    #     f"{location}/{prefix}_conv_ci_results.pt",
-    #     "parameter_log.activation_i",
-    #     "max_test_accuracy",
-    #     colorbar="parameter_log.num_conv_layer",
-    #     name="73",
-    #     size_factor=(6.5 * 1 / 3, 1.61803398874),
-    #     filters=filters,
-    # )
-    # create_line_figure_max(
-    #     f"{location}/{prefix}_conv_fli0_results.pt",
-    #     "parameter_log.activation_i",
-    #     "max_test_accuracy",
-    #     colorbar="parameter_log.num_linear_layer",
-    #     name="73",
-    #     size_factor=(6.5 * 1 / 3, 1.61803398874),
-    #     filters=filters,
-    # )
-    # create_line_figure_max(
-    #     f"{location}/{prefix}_conv_fli_results.pt",
-    #     "parameter_log.activation_i",
-    #     "max_test_accuracy",
-    #     colorbar="parameter_log.num_linear_layer",
-    #     name="73",
-    #     size_factor=(6.5 * 1 / 3, 1.61803398874),
-    #     filters=filters,
-    # )
-    # create_line_figure_max(
-    #     f"{location}/{prefix}_conv_fi_results.pt",
-    #     "parameter_log.activation_i",
-    #     "max_test_accuracy",
-    #     colorbar="parameter_log.num_linear_layer",
-    #     name="73",
-    #     size_factor=(6.5 * 1 / 3, 1.61803398874),
-    #     filters=filters,
-    # )
+    create_line_figure_max(
+        f"{location}/silu_conv_cli1_results.pt",
+        "parameter_log.activation_i",
+        "max_test_accuracy",
+        colorbar="parameter_log.num_conv_layer",
+        name="22",
+        size_factor=(6.5 * 1 / 3, 1.61803398874),
+    )
 
-    # precision = 2 ** 8
-    # clamp = Clamp()
-    # rp = ReducePrecision(precision=precision)
-    # noise = GaussianNoise(leakage=0.5, precision=precision)
-    # inputs = np.linspace(-0.25, 0.25, precision * 2 + 1)
-    # weights = np.linspace(-0.25, 0.25, precision * 2 + 1)
-    # x1 = clamp(torch.tensor(inputs, requires_grad=False))
-    # x1 = rp(x1)
-    # x1 = noise(x1)
-    # x2 = clamp(torch.tensor(weights, requires_grad=False))
-    # x2 = rp(x2)
-    # x2 = noise(x2)
-    # output = np.matmul(x1.reshape(-1, 1), x2.reshape(1, -1))
-    # output = noise(output)
-    # output = clamp(output)
-    # output = rp(output)
-    # output = np.clip(output, -1, 1)
-    # output = GeLU()(output)
-    # # diff = output - np.matmul(inputs.reshape(-1, 1), weights.reshape(1, -1))
-    # plt.contourf(inputs, weights, output, levels=100)
-    # plt.colorbar()
-    # plt.show()
+    create_line_figure_max(
+        f"{location}/gelu_conv_fli0_results.pt",
+        "parameter_log.activation_i",
+        "max_test_accuracy",
+        colorbar="parameter_log.num_linear_layer",
+        name="23",
+        size_factor=(6.5 * 1 / 3, 1.61803398874),
+    )
+
+    create_line_figure_max(
+        f"{location}/silu_conv_fli0_results.pt",
+        "parameter_log.activation_i",
+        "max_test_accuracy",
+        colorbar="parameter_log.num_linear_layer",
+        name="24",
+        size_factor=(6.5 * 1 / 3, 1.61803398874),
+    )
+
+    create_line_figure_max(
+        f"{location}/vit_gelu_4n.pt",
+        "parameter_log.activation_i",
+        "max_test_accuracy",
+        colorbar="parameter_log.leakage_w",
+        name="31",
+        size_factor=(6.5 * 1 / 3, 1.61803398874),
+    )
+    create_line_figure_max(
+        f"{location}/vit_silu_4n.pt",
+        "parameter_log.activation_i",
+        "max_test_accuracy",
+        colorbar="parameter_log.leakage_w",
+        name="32",
+        size_factor=(6.5 * 1 / 3, 1.61803398874),
+    )
+    create_line_figure_max(
+        f"{location}/vit_gege_4n.pt",
+        "parameter_log.activation_i",
+        "max_test_accuracy",
+        colorbar="parameter_log.leakage_w",
+        name="33",
+        size_factor=(6.5 * 1 / 3, 1.61803398874),
+    )
