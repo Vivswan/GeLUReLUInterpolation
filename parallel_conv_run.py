@@ -32,25 +32,29 @@ combination_dict = OrderedDict({
     "activation_s": [1, 1.25, 1.5, 1.75, 2, 2.25, 2.5, 2.75, 3],
     "precision": [None, 4, 8, 16, 32, 64],
     "leakage": [None, 0.2, 0.3, 0.4, 0.5, 0.6, 0.7, 0.8],
+
+    "lr": [0.1, 0.01, 0.001, 0.0001],
 })
 
 RUN_LIST = {
-    "ni": "num_conv_layer:6,num_linear_layer:3,activation_s:1,precision_class:None,noise_class:None",
-    "pi": "num_conv_layer:6,num_linear_layer:3,activation_s:1,norm_class:Clamp,precision_class:ReducePrecision,noise_class:None",
-    "pli": "num_conv_layer:6,num_linear_layer:3,activation_s:1,norm_class:Clamp,precision_class:ReducePrecision,noise_class:GaussianNoise",
+    # "ni": "num_conv_layer:6,num_linear_layer:3,activation_s:1,precision_class:None,noise_class:None,lr:0.001",
+    # "pi": "num_conv_layer:6,num_linear_layer:3,activation_s:1,norm_class:Clamp,precision_class:ReducePrecision,noise_class:None,lr:0.001",
+    # "pli": "num_conv_layer:6,num_linear_layer:3,activation_s:1,norm_class:Clamp,precision_class:ReducePrecision,noise_class:GaussianNoise,lr:0.001",
 
-    "ns": "num_conv_layer:6,num_linear_layer:3,activation_i:1,precision_class:None,noise_class:None",
-    "ps": "num_conv_layer:6,num_linear_layer:3,activation_i:1,norm_class:Clamp,precision_class:ReducePrecision,noise_class:None",
-    "pls": "num_conv_layer:6,num_linear_layer:3,activation_i:1,norm_class:Clamp,precision_class:ReducePrecision,noise_class:GaussianNoise",
+    # "ns": "num_conv_layer:6,num_linear_layer:3,activation_i:1,precision_class:None,noise_class:None,lr:0.001",
+    # "ps": "num_conv_layer:6,num_linear_layer:3,activation_i:1,norm_class:Clamp,precision_class:ReducePrecision,noise_class:None,lr:0.001",
+    # "pls": "num_conv_layer:6,num_linear_layer:3,activation_i:1,norm_class:Clamp,precision_class:ReducePrecision,noise_class:GaussianNoise,lr:0.001",
 
-    "ci": "num_linear_layer:3,activation_s:1,precision_class:None,noise_class:None",
-    "cli": "leakage:0.8,num_linear_layer:3,activation_s:1,norm_class:Clamp,precision_class:ReducePrecision,noise_class:GaussianNoise",
-    "cli1": "leakage:0.8,num_linear_layer:1,activation_s:1,norm_class:Clamp,precision_class:ReducePrecision,noise_class:GaussianNoise",
+    # "ci": "num_linear_layer:3,activation_s:1,precision_class:None,noise_class:None,lr:0.001",
+    # "cli": "leakage:0.8,num_linear_layer:3,activation_s:1,norm_class:Clamp,precision_class:ReducePrecision,noise_class:GaussianNoise,lr:0.001",
+    # "cli1": "leakage:0.8,num_linear_layer:1,activation_s:1,norm_class:Clamp,precision_class:ReducePrecision,noise_class:GaussianNoise,lr:0.001",
 
-    "fi": "num_conv_layer:6,activation_s:1,precision_class:None,noise_class:None",
-    "fli": "leakage:0.8,num_conv_layer:6,activation_s:1,norm_class:Clamp,precision_class:ReducePrecision,noise_class:GaussianNoise",
-    "fli1": "leakage:0.8,num_conv_layer:1,activation_s:1,norm_class:Clamp,precision_class:ReducePrecision,noise_class:GaussianNoise",
-    "fli0": "leakage:0.8,num_conv_layer:0,activation_s:1,norm_class:Clamp,precision_class:ReducePrecision,noise_class:GaussianNoise",
+    # "fi": "num_conv_layer:6,activation_s:1,precision_class:None,noise_class:None,lr:0.001",
+    # "fli": "leakage:0.8,num_conv_layer:6,activation_s:1,norm_class:Clamp,precision_class:ReducePrecision,noise_class:GaussianNoise,lr:0.001",
+    # "fli1": "leakage:0.8,num_conv_layer:1,activation_s:1,norm_class:Clamp,precision_class:ReducePrecision,noise_class:GaussianNoise,lr:0.001",
+    # "fli0": "leakage:0.8,num_conv_layer:0,activation_s:1,norm_class:Clamp,precision_class:ReducePrecision,noise_class:GaussianNoise,lr:0.001",
+
+    # "lpli": "num_conv_layer:6,num_linear_layer:3,activation_s:1,norm_class:Clamp,precision_class:ReducePrecision,noise_class:GaussianNoise,leakage:0.8,activation_fn:gelu",
 }
 
 

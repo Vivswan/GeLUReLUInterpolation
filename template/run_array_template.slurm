@@ -5,12 +5,11 @@
 #SBATCH --tasks-per-node=1
 #SBATCH --cpus-per-task=12
 #SBATCH --cluster=gpu
-#SBATCH --partition=a100
+#SBATCH --partition=a100,l40s
 #SBATCH --gres=gpu:1
 #SBATCH --time=1-00:00:00
 #SBATCH --chdir="/ihome/nyoungblood/vis77/logs"
 #SBATCH --array=@@@array@@@
-#SBATCH --exclude=gpu-n[31,32]
 #SBATCH --requeue
 
 source ~/.bashrc

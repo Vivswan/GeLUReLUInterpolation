@@ -52,6 +52,7 @@ class ConvRunParameters:
     color: bool = True
     batch_size: int = 512
     epochs: int = 200
+    lr: float = 1e-3
 
     device: Optional[torch.device] = None
     test_logs: bool = False
@@ -147,7 +148,7 @@ def run_model(parameters: ConvRunParameters):
 
     nn_model.loss_function = nn.CrossEntropyLoss()
     nn_model.accuracy_function = cross_entropy_loss_accuracy
-    nn_model.optimizer = optim.Adam(params=nn_model.parameters())
+    nn_model.optimizer = optim.Adam(params=nn_model.parameters(), lr=parameters.lr)
 
     nn_model.compile(device=device, layer_data=True)
     weight_model.compile(device=device)
@@ -305,6 +306,7 @@ def run_parser():
     parser.add_argument("--noise_class", type=str, default=None)
     parser.add_argument("--leakage", type=float, default=None)
 
+    parser.add_argument("--lr", type=float, default=ConvRunParameters.lr)
     parser.add_argument("--device", type=str, default=None)
     parser.add_argument("--color", type=str, default=str(ConvRunParameters.color))
 
