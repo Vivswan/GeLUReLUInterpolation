@@ -611,7 +611,7 @@ def create_convergence_figure(data_path, size_factor):
 
 if __name__ == '__main__':
     location = r"C:\X"
-    prefix = "silu"
+    prefix = "gelu"
     # compile_data(f"{location}/{prefix}_ns_results")
     # compile_data(f"{location}/{prefix}_ni_results")
     # compile_data(f"{location}/{prefix}_ps_results")
@@ -632,90 +632,100 @@ if __name__ == '__main__':
     # compile_data(f"{location}/vit_silu_4n")
     # compile_data(f"{location}/vit_gege_4n")
     # compile_data(f"{location}/vit_silu_d")
-    # compile_data(f"{location}/vit_gelu_d")
+    # compile_data(f"{location}/gelu_parneet_lpli_results")
+    # compile_data(f"{location}/gelu_parneet_pli_results")
 
     create_line_figure_max(
-        f"{location}/gelu_conv_pls_results.pt",
-        "parameter_log.activation_s",
+        f"{location}/gelu_parneet_pli_results.pt",
+        "parameter_log.activation_i",
         "max_test_accuracy",
         colorbar="parameter_log.leakage_w",
         name="11",
         size_factor=(6.5 * 1 / 3, 1.61803398874),
     )
-    create_line_figure_max(
-        f"{location}/gelu_conv_pli_results.pt",
-        "parameter_log.activation_i",
-        "max_test_accuracy",
-        colorbar="parameter_log.leakage_w",
-        name="12",
-        size_factor=(6.5 * 1 / 3, 1.61803398874),
-    )
-    create_line_figure_max(
-        f"{location}/silu_conv_pli_results.pt",
-        "parameter_log.activation_i",
-        "max_test_accuracy",
-        colorbar="parameter_log.leakage_w",
-        name="13",
-        size_factor=(6.5 * 1 / 3, 1.61803398874),
-    )
 
-    create_line_figure_max(
-        f"{location}/gelu_conv_cli1_results.pt",
-        "parameter_log.activation_i",
-        "max_test_accuracy",
-        colorbar="parameter_log.num_conv_layer",
-        name="21",
-        size_factor=(6.5 * 1 / 3, 1.61803398874),
-    )
-
-    create_line_figure_max(
-        f"{location}/silu_conv_cli1_results.pt",
-        "parameter_log.activation_i",
-        "max_test_accuracy",
-        colorbar="parameter_log.num_conv_layer",
-        name="22",
-        size_factor=(6.5 * 1 / 3, 1.61803398874),
-    )
-
-    create_line_figure_max(
-        f"{location}/gelu_conv_fli0_results.pt",
-        "parameter_log.activation_i",
-        "max_test_accuracy",
-        colorbar="parameter_log.num_linear_layer",
-        name="23",
-        size_factor=(6.5 * 1 / 3, 1.61803398874),
-    )
-
-    create_line_figure_max(
-        f"{location}/silu_conv_fli0_results.pt",
-        "parameter_log.activation_i",
-        "max_test_accuracy",
-        colorbar="parameter_log.num_linear_layer",
-        name="24",
-        size_factor=(6.5 * 1 / 3, 1.61803398874),
-    )
-
-    create_line_figure_max(
-        f"{location}/vit_gelu_4n.pt",
-        "parameter_log.activation_i",
-        "max_test_accuracy",
-        colorbar="parameter_log.leakage_w",
-        name="31",
-        size_factor=(6.5 * 1 / 3, 1.61803398874),
-    )
-    create_line_figure_max(
-        f"{location}/vit_silu_4n.pt",
-        "parameter_log.activation_i",
-        "max_test_accuracy",
-        colorbar="parameter_log.leakage_w",
-        name="32",
-        size_factor=(6.5 * 1 / 3, 1.61803398874),
-    )
-    create_line_figure_max(
-        f"{location}/vit_gege_4n.pt",
-        "parameter_log.activation_i",
-        "max_test_accuracy",
-        colorbar="parameter_log.leakage_w",
-        name="33",
-        size_factor=(6.5 * 1 / 3, 1.61803398874),
-    )
+    # create_line_figure_max(
+    #     f"{location}/gelu_conv_pls_results.pt",
+    #     "parameter_log.activation_s",
+    #     "max_test_accuracy",
+    #     colorbar="parameter_log.leakage_w",
+    #     name="11",
+    #     size_factor=(6.5 * 1 / 3, 1.61803398874),
+    # )
+    # create_line_figure_max(
+    #     f"{location}/gelu_conv_pli_results.pt",
+    #     "parameter_log.activation_i",
+    #     "max_test_accuracy",
+    #     colorbar="parameter_log.leakage_w",
+    #     name="12",
+    #     size_factor=(6.5 * 1 / 3, 1.61803398874),
+    # )
+    # create_line_figure_max(
+    #     f"{location}/silu_conv_pli_results.pt",
+    #     "parameter_log.activation_i",
+    #     "max_test_accuracy",
+    #     colorbar="parameter_log.leakage_w",
+    #     name="13",
+    #     size_factor=(6.5 * 1 / 3, 1.61803398874),
+    # )
+    #
+    # create_line_figure_max(
+    #     f"{location}/gelu_conv_cli1_results.pt",
+    #     "parameter_log.activation_i",
+    #     "max_test_accuracy",
+    #     colorbar="parameter_log.num_conv_layer",
+    #     name="21",
+    #     size_factor=(6.5 * 1 / 3, 1.61803398874),
+    # )
+    #
+    # create_line_figure_max(
+    #     f"{location}/silu_conv_cli1_results.pt",
+    #     "parameter_log.activation_i",
+    #     "max_test_accuracy",
+    #     colorbar="parameter_log.num_conv_layer",
+    #     name="22",
+    #     size_factor=(6.5 * 1 / 3, 1.61803398874),
+    # )
+    #
+    # create_line_figure_max(
+    #     f"{location}/gelu_conv_fli0_results.pt",
+    #     "parameter_log.activation_i",
+    #     "max_test_accuracy",
+    #     colorbar="parameter_log.num_linear_layer",
+    #     name="23",
+    #     size_factor=(6.5 * 1 / 3, 1.61803398874),
+    # )
+    #
+    # create_line_figure_max(
+    #     f"{location}/silu_conv_fli0_results.pt",
+    #     "parameter_log.activation_i",
+    #     "max_test_accuracy",
+    #     colorbar="parameter_log.num_linear_layer",
+    #     name="24",
+    #     size_factor=(6.5 * 1 / 3, 1.61803398874),
+    # )
+    #
+    # create_line_figure_max(
+    #     f"{location}/vit_gelu_4n.pt",
+    #     "parameter_log.activation_i",
+    #     "max_test_accuracy",
+    #     colorbar="parameter_log.leakage_w",
+    #     name="31",
+    #     size_factor=(6.5 * 1 / 3, 1.61803398874),
+    # )
+    # create_line_figure_max(
+    #     f"{location}/vit_silu_4n.pt",
+    #     "parameter_log.activation_i",
+    #     "max_test_accuracy",
+    #     colorbar="parameter_log.leakage_w",
+    #     name="32",
+    #     size_factor=(6.5 * 1 / 3, 1.61803398874),
+    # )
+    # create_line_figure_max(
+    #     f"{location}/vit_gege_4n.pt",
+    #     "parameter_log.activation_i",
+    #     "max_test_accuracy",
+    #     colorbar="parameter_log.leakage_w",
+    #     name="33",
+    #     size_factor=(6.5 * 1 / 3, 1.61803398874),
+    # )

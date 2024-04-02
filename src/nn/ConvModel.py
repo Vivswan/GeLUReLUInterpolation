@@ -3,7 +3,6 @@ from typing import Type, Union, List
 import torch
 from analogvnn.nn.Linear import Linear
 from analogvnn.nn.module.FullSequential import FullSequential
-from analogvnn.nn.module.Layer import Layer
 from analogvnn.nn.noise.GaussianNoise import GaussianNoise
 from analogvnn.nn.normalize.Normalize import Normalize
 from analogvnn.nn.precision.ReducePrecision import ReducePrecision
@@ -12,6 +11,7 @@ from torch.nn import Flatten
 
 from src.fn.pick_instanceof_module import pick_instanceof_module
 from src.nn.ReLUGeLUInterpolation import ReLUGeLUInterpolation
+from src.nn.ReLUSiLUInterpolation import ReLUSiLUInterpolation
 
 
 class ConvModel(FullSequential):
@@ -20,7 +20,7 @@ class ConvModel(FullSequential):
             input_shape, num_classes,
             num_conv_layer: int = 6,
             num_linear_layer: int = 3,
-            activation_fn: Type[Layer] = ReLUGeLUInterpolation,
+            activation_fn: Type[Union[ReLUGeLUInterpolation, ReLUSiLUInterpolation]] = ReLUGeLUInterpolation,
             activation_i: float = 1.0,
             activation_s: float = 1.0,
             activation_alpha: float = 0.0,

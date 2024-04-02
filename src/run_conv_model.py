@@ -12,10 +12,10 @@ import torch.backends.cudnn
 import torchinfo
 import torchvision
 from analogvnn.nn.module.Layer import Layer
+from analogvnn.nn.noise.GaussianNoise import GaussianNoise
 from analogvnn.nn.normalize.Clamp import Clamp
 from analogvnn.nn.normalize.Normalize import Normalize
 from analogvnn.nn.precision.ReducePrecision import ReducePrecision
-from analogvnn.nn.noise.GaussianNoise import GaussianNoise
 from analogvnn.parameter.PseudoParameter import PseudoParameter
 from analogvnn.utils.is_cpu_cuda import is_cpu_cuda
 from torch import optim, nn
@@ -300,6 +300,7 @@ def run_parser():
     parser.add_argument("--activation_fn", type=str, default="gelu")
     parser.add_argument("--activation_i", type=float, default=1.0)
     parser.add_argument("--activation_s", type=float, default=1.0)
+    parser.add_argument("--activation_alpha", type=float, default=0.0)
     parser.add_argument("--norm_class", type=str, default=None)
     parser.add_argument("--precision_class", type=str, default=None)
     parser.add_argument("--precision", type=int, default=None)
