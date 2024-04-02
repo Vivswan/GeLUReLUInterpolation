@@ -33,11 +33,11 @@ combination_dict = OrderedDict({
 })
 
 RUN_LIST = {
-    # "gelu_n": "depth:3,norm_class:Clamp,precision_class:ReducePrecision,noise_class:GaussianNoise,activation_fn:gelu",
-    "gege_n": "depth:3,norm_class:Clamp,precision_class:ReducePrecision,noise_class:GaussianNoise,activation_fn:gege",
-    "silu_n": "depth:3,norm_class:Clamp,precision_class:ReducePrecision,noise_class:GaussianNoise,activation_fn:silu",
-    "gelu_d": "leakage:0.8,norm_class:Clamp,precision_class:ReducePrecision,noise_class:GaussianNoise,activation_fn:gelu",
-    "silu_d": "leakage:0.8,norm_class:Clamp,precision_class:ReducePrecision,noise_class:GaussianNoise,activation_fn:silu",
+    "gelu_4n": "depth:4,norm_class:Clamp,precision_class:ReducePrecision,noise_class:GaussianNoise,activation_fn:gelu",
+    "silu_4n": "depth:4,norm_class:Clamp,precision_class:ReducePrecision,noise_class:GaussianNoise,activation_fn:silu",
+    "gege_4n": "depth:4,norm_class:Clamp,precision_class:ReducePrecision,noise_class:GaussianNoise,activation_fn:gege",
+    # "gelu_d": "leakage:0.8,norm_class:Clamp,precision_class:ReducePrecision,noise_class:GaussianNoise,activation_fn:gelu",
+    # "silu_d": "leakage:0.8,norm_class:Clamp,precision_class:ReducePrecision,noise_class:GaussianNoise,activation_fn:silu",
 }
 
 
