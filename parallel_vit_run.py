@@ -55,6 +55,7 @@ def prepare_data_folder(folder_path):
         os.mkdir(p)
 
     torchvision.datasets.CIFAR10(root=str(datasets_path.absolute()), download=True)
+    torchvision.datasets.CIFAR100(root=str(datasets_path.absolute()), download=True)
 
 
 def run_command(command):

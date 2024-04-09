@@ -48,7 +48,7 @@ class ConvRunParameters:
     noise_class: Type[Layer] = None
     leakage: Optional[float] = None
 
-    dataset: Type[VisionDataset] = torchvision.datasets.CIFAR10
+    dataset: Type[VisionDataset] = None
     color: bool = True
     batch_size: int = 512
     epochs: int = 200
@@ -218,7 +218,10 @@ def run_model(parameters: ConvRunParameters):
         with open(log_file, "a+", encoding="utf-8") as file:
             file.write(print_str)
 
-        if train_accuracy < 0.125 and epoch >= 9:
+        if train_accuracy < 0.125 and epoch >= 9 and parameters.dataset == torchvision.datasets.CIFAR10:
+            break
+
+        if train_accuracy < 0.0125 and epoch >= 9 and parameters.dataset == torchvision.datasets.CIFAR100:
             break
 
         if parameters.test_run:
@@ -275,6 +278,13 @@ def get_parameters(kwargs) -> ConvRunParameters:
     else:
         raise ValueError("Invalid value for activation_fn")
 
+    if kwargs["dataset"].lower() == "cifar10":
+        kwargs["dataset"] = torchvision.datasets.CIFAR10
+    elif kwargs["dataset"].lower() == "cifar100":
+        kwargs["dataset"] = torchvision.datasets.CIFAR100
+    else:
+        raise ValueError("Invalid value for dataset")
+    
     for key, value in kwargs.items():
         if hasattr(parameters, key):
             setattr(parameters, key, value)
@@ -294,6 +304,7 @@ def run_parser():
     parser.add_argument("--name", type=str, default=None)
     parser.add_argument("--timestamp", type=str, default=None)
     parser.add_argument("--data_folder", type=str, required=True)
+    parser.add_argument("--dataset", type=str, default="CIFAR10")
 
     parser.add_argument("--num_conv_layer", type=int, default=6)
     parser.add_argument("--num_linear_layer", type=int, default=3)
