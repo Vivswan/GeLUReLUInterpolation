@@ -305,8 +305,8 @@ def run_model(parameters: VGGRunParameters):
         with open(log_file, "a+", encoding="utf-8") as file:
             file.write(print_str)
 
-        # if train_accuracy < 0.0125 and epoch >= 9 and parameters.dataset == torchvision.datasets.CIFAR100:
-        #     break
+        if train_accuracy < (1.25 / 100) and epoch >= 9 and parameters.dataset == torchvision.datasets.CIFAR100:
+            break
 
         if parameters.test_run:
             break
@@ -345,13 +345,6 @@ def this_path():
 def get_parameters(kwargs) -> VGGRunParameters:
     parameters = VGGRunParameters()
 
-    if kwargs["color"].lower() == "true":
-        kwargs["color"] = True
-    elif kwargs["color"].lower() == "false":
-        kwargs["color"] = False
-    else:
-        raise ValueError("Invalid value for color")
-
     for key, value in kwargs.items():
         if hasattr(parameters, key):
             setattr(parameters, key, value)
@@ -368,9 +361,6 @@ def run_parser():
     parser.add_argument("--activation_i", type=float, default=1.0)
     parser.add_argument("--precision", type=int, required=True)
     parser.add_argument("--leakage", type=float, required=True)
-
-    parser.add_argument("--device", type=str, default=None)
-    parser.add_argument("--color", type=str, default=str(VGGRunParameters.color))
 
     parser.add_argument("--test_logs", action='store_true')
     parser.set_defaults(test_logs=False)

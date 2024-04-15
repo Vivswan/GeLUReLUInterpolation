@@ -621,6 +621,14 @@ if __name__ == '__main__':
             continue
         compile_data(i)
 
+    create_line_figure_max(
+        f"{location}/conv_gelu_pli.pt",
+        "parameter_log.activation_i",
+        "max_test_accuracy",
+        colorbar="bit_precision_w",
+        name="12",
+        size_factor=(6.5 * 1 / 3, 1.61803398874),
+    )
     # create_line_figure_max(
     #     f"{location}/conv_lrelu.pt",
     #     "parameters_json.activation_alpha",
@@ -629,14 +637,14 @@ if __name__ == '__main__':
     #     name="11",
     #     size_factor=(6.5 * 1 / 3, 1.61803398874),
     # )
-    create_line_figure_max(
-        f"{location}/c100_conv_gpli.pt",
-        "parameter_log.activation_i",
-        "max_test_accuracy",
-        colorbar="parameter_log.leakage_w",
-        name="12",
-        size_factor=(6.5 * 1 / 3, 1.61803398874),
-    )
+    # create_line_figure_max(
+    #     f"{location}/c100_conv_gpli.pt",
+    #     "parameter_log.activation_i",
+    #     "max_test_accuracy",
+    #     colorbar="parameter_log.leakage_w",
+    #     name="12",
+    #     size_factor=(6.5 * 1 / 3, 1.61803398874),
+    # )
 
     # create_line_figure_max(
     #     f"{location}/conv_gelu_pls.pt",

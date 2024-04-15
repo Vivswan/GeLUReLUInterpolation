@@ -386,9 +386,6 @@ def run_model(parameters: ConvRunParameters):
         if train_accuracy < 0.125 and epoch >= 9 and parameters.dataset == torchvision.datasets.CIFAR10:
             break
 
-        if train_accuracy < 0.0125 and epoch >= 9 and parameters.dataset == torchvision.datasets.CIFAR100:
-            break
-
         if parameters.test_run:
             break
 

@@ -17,7 +17,6 @@ from natsort import natsorted, ns
 from src.run_vgg_c100 import this_path
 
 combination_dict = OrderedDict({
-    "color": [False, True],
     "activation_i": [0, 0.1, 0.2, 0.3, 0.4, 0.5, 0.6, 0.7, 0.8, 0.9, 1],
     "precision": [4, 8, 16, 32, 64],
     "leakage": [0.2, 0.3, 0.4, 0.5, 0.6, 0.7, 0.8],
