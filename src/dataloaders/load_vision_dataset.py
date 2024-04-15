@@ -34,13 +34,20 @@ def load_vision_dataset(dataset: Type[VisionDataset], path, batch_size, is_cuda=
         }
         dataset_kwargs.update(cuda_kwargs)
 
-    if "train" not in inspect.getfullargspec(dataset.__init__).args:
+    if "train" in inspect.getfullargspec(dataset.__init__).args:
+        train_set = dataset(root=path, train=True, download=True,
+                            transform=get_vision_dataset_transformation(grayscale))
+        test_set = dataset(root=path, train=False, download=True,
+                           transform=get_vision_dataset_transformation(grayscale))
+    elif "split" in inspect.getfullargspec(dataset.__init__).args:
+        train_set = dataset(root=path, split="train", download=True,
+                            transform=get_vision_dataset_transformation(grayscale))
+        test_set = dataset(root=path, split="test", download=True,
+                           transform=get_vision_dataset_transformation(grayscale))
+    else:
         raise Exception(f"{dataset} does have a pre split of training data.")
 
-    train_set = dataset(root=path, train=True, download=True, transform=get_vision_dataset_transformation(grayscale))
     train_loader = DataLoader(train_set, **dataset_kwargs)
-
-    test_set = dataset(root=path, train=False, download=True, transform=get_vision_dataset_transformation(grayscale))
     test_loader = DataLoader(test_set, **dataset_kwargs)
 
     zeroth_element = next(iter(test_loader))[0]

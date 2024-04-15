@@ -104,7 +104,7 @@ class ViTRunParameters:
         return json.loads(json.dumps(dataclasses.asdict(self), default=str))
 
     def __repr__(self):
-        return f"RunParameters({json.dumps(self.json)})"
+        return f"{self.__class__.__name__}({json.dumps(self.json)})"
 
 
 def train_on(
@@ -214,6 +214,7 @@ def run_model(parameters: ViTRunParameters):
         name=parameters.name,
         timestamp=parameters.timestamp
     )
+    parameters.timestamp = paths.timestamp
     log_file = paths.logs.joinpath(f"{paths.name}_logs.txt")
 
     print(f"Timestamp: {paths.timestamp}")

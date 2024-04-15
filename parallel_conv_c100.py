@@ -14,24 +14,17 @@ from pathlib import Path
 import torchvision
 from natsort import natsorted, ns
 
-from src.run_vit_model import this_path
+from src.run_vgg_c100 import this_path
 
 combination_dict = OrderedDict({
-    "color": [True, False],
-
-    "depth": [1, 2, 3, 4, 5, 6],
-    "activation_fn": ["gelu", "silu", 'gege'],
+    "color": [False, True],
     "activation_i": [0, 0.1, 0.2, 0.3, 0.4, 0.5, 0.6, 0.7, 0.8, 0.9, 1],
     "precision": [4, 8, 16, 32, 64],
     "leakage": [0.2, 0.3, 0.4, 0.5, 0.6, 0.7, 0.8],
 })
 
 RUN_LIST = {
-    "gelu_4n": "depth:4,activation_fn:gelu",
-    "silu_4n": "depth:4,activation_fn:silu",
-    "gege_4n": "depth:4,activation_fn:gege",
-    # "gelu_d": "leakage:0.8,norm_class:Clamp,precision_class:ReducePrecision,noise_class:GaussianNoise,activation_fn:gelu",
-    # "silu_d": "leakage:0.8,norm_class:Clamp,precision_class:ReducePrecision,noise_class:GaussianNoise,activation_fn:silu",
+    "c100_gpli": "",
 }
 
 
@@ -48,7 +41,6 @@ def prepare_data_folder(folder_path):
             continue
         os.mkdir(p)
 
-    torchvision.datasets.CIFAR10(root=str(datasets_path.absolute()), download=True)
     torchvision.datasets.CIFAR100(root=str(datasets_path.absolute()), download=True)
 
 
@@ -117,7 +109,6 @@ def create_command_list(extra_arg="", select=""):
 
     combinations = list(itertools.product(*list(cd_copy.values())))
     command_list = []
-
     path = this_path().relative_to(Path(__file__).parent).__str__()
     for c in combinations:
         command_dict = dict(zip(list(cd_copy.keys()), c))
@@ -192,9 +183,9 @@ def create_slurm_scripts():
     template_file = Path(__file__).parent.joinpath("template/run_array_template.slurm").read_text(encoding="utf-8")
     for i in RUN_LIST:
         end = len(create_command_list('', RUN_LIST[i]))
-        for j in range(1, end + 2, 900):
+        for j in range(1, end + 2, 750):
             r_start = j
-            r_end = min(j + 900 - 1, end)
+            r_end = min(j + 750 - 1, end)
             if r_end <= r_start:
                 continue
             with open(f"_crc_slurm/run_{i}_{j}.slurm", "w", encoding="utf-8") as slurm_file:

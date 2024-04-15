@@ -17,7 +17,7 @@ from analogvnn.nn.normalize.Clamp import *
 from analogvnn.nn.precision.ReducePrecision import ReducePrecision
 from natsort import natsorted, ns
 
-from src.run_conv_model import this_path
+from src.run_conv_c10 import this_path
 
 combination_dict = OrderedDict({
     "color": [False, True],
@@ -56,11 +56,6 @@ RUN_LIST = {
     # "fli0": "leakage:0.8,num_conv_layer:0,activation_s:1,norm_class:Clamp,precision_class:ReducePrecision,noise_class:GaussianNoise,lr:0.001,activation_alpha:0,dataset:cifar10",
     # "lpli": "num_conv_layer:6,num_linear_layer:3,activation_s:1,norm_class:Clamp,precision_class:ReducePrecision,noise_class:GaussianNoise,leakage:0.8,activation_fn:gelu,activation_alpha:0,dataset:cifar10",
     "lrelu": "num_conv_layer:6,num_linear_layer:3,activation_i:0,activation_s:1,norm_class:Clamp,precision_class:ReducePrecision,noise_class:GaussianNoise,activation_fn:gelu,lr:0.001,dataset:cifar10",
-
-    # CIFAR-100
-    "c100_gpli": "num_conv_layer:6,num_linear_layer:3,activation_s:1,norm_class:Clamp,precision_class:ReducePrecision,noise_class:GaussianNoise,lr:0.001,activation_alpha:0,activation_fn:gelu,dataset:cifar100",
-    # "c100_gcli1": "leakage:0.8,num_linear_layer:1,activation_s:1,norm_class:Clamp,precision_class:ReducePrecision,noise_class:GaussianNoise,lr:0.001,activation_alpha:0,activation_fn:gelu,dataset:cifar100",
-    # "c100_gfli0": "leakage:0.8,num_conv_layer:0,activation_s:1,norm_class:Clamp,precision_class:ReducePrecision,noise_class:GaussianNoise,lr:0.001,activation_alpha:0,activation_fn:gelu,dataset:cifar100",
 }
 
 
@@ -77,7 +72,7 @@ def prepare_data_folder(folder_path):
             continue
         os.mkdir(p)
 
-    torchvision.datasets.CIFAR100(root=str(datasets_path.absolute()), download=True)
+    torchvision.datasets.CIFAR10(root=str(datasets_path.absolute()), download=True)
 
 
 def run_command(command):
@@ -150,6 +145,7 @@ def create_command_list(extra_arg="", select=""):
 
     combinations = list(itertools.product(*list(cd_copy.values())))
     command_list = []
+    path = this_path().relative_to(Path(__file__).parent).__str__()
     for c in combinations:
         command_dict = dict(zip(list(cd_copy.keys()), c))
 
@@ -158,7 +154,6 @@ def create_command_list(extra_arg="", select=""):
         if (command_dict["precision_class"] is None) != (command_dict["precision"] is None):
             continue
 
-        path = this_path().relative_to(Path(__file__).parent).__str__()
         command_str = f'python {path}'
         for key, value in command_dict.items():
             if value is None:

@@ -1,6 +1,7 @@
 import itertools
 import json
 import math
+import warnings
 from pathlib import Path
 from typing import Tuple
 
@@ -113,13 +114,13 @@ def get_combined_data(data_path):
 
     data = {}
     dp = list(data_path.iterdir())
-    for i in tqdm(dp, desc="Loading Data", ascii=True):
+    for i in tqdm(dp, desc=f"Loading Data {data_path.parent.stem}", ascii=True):
         data[i.name] = {}
         for j in i.iterdir():
             data[i.name][j.name[j.name.index("_") + 1:]] = torch.load(j)
         if data[i.name] == {}:
             del data[i.name]
-            print(f"Empty: {i.name}")
+            # print(f"Empty: {i.name}")
             continue
         data[i.name] = sanitise_data(data[i.name])
     return data
@@ -127,6 +128,9 @@ def get_combined_data(data_path):
 
 def compile_data(data_path, name=None):
     data_path = Path(data_path)
+    if not (data_path / "models").exists():
+        warnings.warn(f"Models directory: {data_path} does not exist")
+        return None
     run_data = get_combined_data(data_path / "models")
     name = data_path.name if name is None else name
     torch.save(run_data, data_path.parent.joinpath(name + ".pt"))
@@ -419,6 +423,7 @@ def create_line_figure_max(data_path, x_axis, y_axis, subsection=None, colorbar=
     if colorbar is not None:
         color_map = main_color_palette(n_colors=256)
         color_map = matplotlib.colors.LinearSegmentedColormap.from_list("hsl", color_map)
+        plot_data["hue"] = [(x == 'True' if x in ['True', 'False'] else x) for x in plot_data["hue"]]
         if max_vmax is None:
             max_vmax = max(plot_data["hue"])
         if min_vmin is None:
@@ -611,41 +616,30 @@ def create_convergence_figure(data_path, size_factor):
 
 if __name__ == '__main__':
     location = r"C:\X"
-    prefix = "gelu"
-    # compile_data(f"{location}/{prefix}_ns_results")
-    # compile_data(f"{location}/{prefix}_ni_results")
-    # compile_data(f"{location}/{prefix}_ps_results")
-    # compile_data(f"{location}/{prefix}_pi_results")
-    # compile_data(f"{location}/{prefix}_pls_results")
-    # compile_data(f"{location}/{prefix}_pli_results")
-    # compile_data(f"{location}/{prefix}_ci_results")
-    # compile_data(f"{location}/{prefix}_cli_results")
-    # compile_data(f"{location}/{prefix}_cli1_results")
-    # compile_data(f"{location}/{prefix}_fi_results")
-    # compile_data(f"{location}/{prefix}_fli_results")
-    # compile_data(f"{location}/{prefix}_fli0_results")
-    # compile_data(f"{location}/{prefix}_fli1_results")
-    # compile_data(f"{location}/tranformer_gni_results")
-    # compile_data(f"{location}/tranformer_gpi_results")
-    # compile_data(f"{location}/gelu_pli_results")
-    # compile_data(f"{location}/vit_gelu_4n")
-    # compile_data(f"{location}/vit_silu_4n")
-    # compile_data(f"{location}/vit_gege_4n")
-    # compile_data(f"{location}/vit_silu_d")
-    # compile_data(f"{location}/gelu_parneet_lpli_results")
-    # compile_data(f"{location}/gelu_parneet_pli_results")
+    for i in Path(location).glob("*"):
+        if not i.is_dir():
+            continue
+        compile_data(i)
 
+    # create_line_figure_max(
+    #     f"{location}/conv_lrelu.pt",
+    #     "parameters_json.activation_alpha",
+    #     "max_test_accuracy",
+    #     colorbar="parameter_log.leakage_w",
+    #     name="11",
+    #     size_factor=(6.5 * 1 / 3, 1.61803398874),
+    # )
     create_line_figure_max(
-        f"{location}/gelu_parneet_pli_results.pt",
+        f"{location}/c100_conv_gpli.pt",
         "parameter_log.activation_i",
         "max_test_accuracy",
         colorbar="parameter_log.leakage_w",
-        name="11",
+        name="12",
         size_factor=(6.5 * 1 / 3, 1.61803398874),
     )
 
     # create_line_figure_max(
-    #     f"{location}/gelu_conv_pls_results.pt",
+    #     f"{location}/conv_gelu_pls.pt",
     #     "parameter_log.activation_s",
     #     "max_test_accuracy",
     #     colorbar="parameter_log.leakage_w",
