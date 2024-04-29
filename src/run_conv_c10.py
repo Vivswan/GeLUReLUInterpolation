@@ -129,7 +129,7 @@ class ConvModel(FullSequential):
         self.all_layers: List[nn.Module] = []
 
         temp_x = torch.zeros(self.hyperparameters.input_shape, requires_grad=False)
-        if self.num_conv_layer >= 1:
+        if self.hyperparameters.num_conv_layer >= 1:
             conv2d = nn.Conv2d(
                 in_channels=self.hyperparameters.input_shape[1],
                 out_channels=48,
@@ -143,7 +143,7 @@ class ConvModel(FullSequential):
                 self.hyperparameters.get_activation_fn(),
             ]
             temp_x = conv2d(temp_x)
-        if self.num_conv_layer >= 2:
+        if self.hyperparameters.num_conv_layer >= 2:
             conv2d = nn.Conv2d(in_channels=48, out_channels=48, kernel_size=(3, 3))
             max_pool2d = nn.MaxPool2d(2, 2)
             self.all_layers += [
@@ -155,7 +155,7 @@ class ConvModel(FullSequential):
             ]
             temp_x = conv2d(temp_x)
             temp_x = max_pool2d(temp_x)
-        if self.num_conv_layer >= 3:
+        if self.hyperparameters.num_conv_layer >= 3:
             conv2d = nn.Conv2d(in_channels=48, out_channels=96, kernel_size=(3, 3), padding=(1, 1))
             self.all_layers += [
                 nn.Dropout(0.25),
@@ -165,7 +165,7 @@ class ConvModel(FullSequential):
                 self.hyperparameters.get_activation_fn(),
             ]
             temp_x = conv2d(temp_x)
-        if self.num_conv_layer >= 4:
+        if self.hyperparameters.num_conv_layer >= 4:
             conv2d = nn.Conv2d(in_channels=96, out_channels=96, kernel_size=(3, 3))
             max_pool2d = nn.MaxPool2d(2, 2)
             self.all_layers += [
@@ -177,7 +177,7 @@ class ConvModel(FullSequential):
             ]
             temp_x = conv2d(temp_x)
             temp_x = max_pool2d(temp_x)
-        if self.num_conv_layer >= 5:
+        if self.hyperparameters.num_conv_layer >= 5:
             conv2d = nn.Conv2d(in_channels=96, out_channels=192, kernel_size=(3, 3), padding=(1, 1))
             self.all_layers += [
                 nn.Dropout(0.25),
@@ -187,7 +187,7 @@ class ConvModel(FullSequential):
                 self.hyperparameters.get_activation_fn(),
             ]
             temp_x = conv2d(temp_x)
-        if self.num_conv_layer >= 6:
+        if self.hyperparameters.num_conv_layer >= 6:
             conv2d = nn.Conv2d(in_channels=192, out_channels=192, kernel_size=(3, 3))
             max_pool2d = nn.MaxPool2d(2, 2)
             self.all_layers += [
@@ -203,7 +203,7 @@ class ConvModel(FullSequential):
         self.all_layers.append(Flatten(start_dim=1))
         temp_x = self.all_layers[-1](temp_x)
 
-        if self.num_linear_layer >= 3:
+        if self.hyperparameters.num_linear_layer >= 3:
             linear = nn.Linear(in_features=temp_x.shape[1], out_features=512)
             self.all_layers += [
                 *self.hyperparameters.create_doa_layer(),
@@ -213,7 +213,7 @@ class ConvModel(FullSequential):
                 nn.Dropout(0.5),
             ]
             temp_x = linear(temp_x)
-        if self.num_linear_layer >= 2:
+        if self.hyperparameters.num_linear_layer >= 2:
             linear = nn.Linear(in_features=temp_x.shape[1], out_features=256)
             self.all_layers += [
                 *self.hyperparameters.create_doa_layer(),
