@@ -48,9 +48,9 @@ class VGGRunParameters:
     model_version: Optional[str] = "A"
 
     activation_fn: Type[Union[ReLUGeLUInterpolation, ReLUSiLUInterpolation]] = ReLUGeLUInterpolation
-    activation_i: float = 0
-    activation_s: float = 1
-    activation_alpha: float = 0
+    activation_i: float = 0.0
+    activation_s: float = 1.0
+    activation_alpha: float = 0.0
     norm_class: Optional[Type[Clamp]] = Clamp
     precision_class: Optional[Type[ReducePrecision]] = ReducePrecision
     noise_class: Type[GaussianNoise] = GaussianNoise
@@ -72,7 +72,6 @@ class VGGRunParameters:
 
     device: Optional[torch.device] = None
     is_cuda: bool = False
-    test_logs: bool = False
     test_run: bool = False
     tensorboard: bool = False
     save_data: bool = True
@@ -156,18 +155,17 @@ class VGGModel(FullSequential):
             nn.Linear(512 * 7 * 7, 4096),
             *self.hyperparameters.create_aod_layer(),
             self.hyperparameters.get_activation_fn(),
-            *self.hyperparameters.create_doa_layer(),
             nn.Dropout(p=0.5),
 
             *self.hyperparameters.create_doa_layer(),
             nn.Linear(4096, 4096),
-            *self.hyperparameters.create_doa_layer(),
+            *self.hyperparameters.create_aod_layer(),
             self.hyperparameters.get_activation_fn(),
             nn.Dropout(p=0.5),
 
             *self.hyperparameters.create_doa_layer(),
             nn.Linear(4096, self.hyperparameters.num_classes),
-            *self.hyperparameters.create_doa_layer(),
+            *self.hyperparameters.create_aod_layer(),
         ]
         self.all_layers = [x for x in self.all_layers if x is not None]
 
@@ -274,9 +272,6 @@ def run_model(parameters: VGGRunParameters):
 
     print(f"Starting Training...")
     for epoch in range(parameters.epochs):
-        if parameters.test_logs:
-            break
-
         train_loss, train_accuracy = nn_model.train_on(
             train_loader,
             epoch=epoch,
@@ -305,7 +300,7 @@ def run_model(parameters: VGGRunParameters):
         with open(log_file, "a+", encoding="utf-8") as file:
             file.write(print_str)
 
-        if train_accuracy < (1.25 / 100) and epoch >= 9 and parameters.dataset == torchvision.datasets.CIFAR100:
+        if train_accuracy < (1.25 / 100) and epoch >= 9:
             break
 
         if parameters.test_run:
@@ -362,8 +357,6 @@ def run_parser():
     parser.add_argument("--precision", type=int, required=True)
     parser.add_argument("--leakage", type=float, required=True)
 
-    parser.add_argument("--test_logs", action='store_true')
-    parser.set_defaults(test_logs=False)
     parser.add_argument("--test_run", action='store_true')
     parser.set_defaults(test_run=False)
     parser.add_argument("--tensorboard", action='store_true')

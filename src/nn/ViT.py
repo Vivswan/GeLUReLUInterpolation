@@ -123,7 +123,7 @@ class Transformer(nn.Module):
 class ViT(nn.Module):
     def __init__(
             self, *,
-            image_size,
+            input_shape,
             patch_size,
             num_classes,
             dim,
@@ -147,7 +147,7 @@ class ViT(nn.Module):
             device: torch.device = "cpu",
     ):
         super().__init__()
-        self.image_size = image_size
+        self.input_shape = input_shape
         self.patch_size = patch_size
         self.num_classes = num_classes
         self.dim = dim
@@ -170,7 +170,7 @@ class ViT(nn.Module):
         self.leakage = leakage
         self.device = device
 
-        image_height, image_width = image_size, image_size
+        image_height, image_width = input_shape, input_shape
         patch_height, patch_width = pair(patch_size)
 
         assert image_height % patch_height == 0 and image_width % patch_width == 0, 'Image dimensions must be divisible by the patch size.'
@@ -241,7 +241,7 @@ class ViT(nn.Module):
 
     def hyperparameters(self):
         return {
-            "image_size": self.image_size,
+            "input_shape": self.input_shape,
             "patch_size": self.patch_size,
             "num_classes": self.num_classes,
             "dim": self.dim,

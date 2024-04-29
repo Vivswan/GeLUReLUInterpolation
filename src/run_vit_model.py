@@ -5,7 +5,7 @@ import json
 import math
 from dataclasses import dataclass
 from pathlib import Path
-from typing import Type, Optional
+from typing import Type, Optional, Union
 
 import numpy as np
 import torch.backends.cudnn
@@ -45,14 +45,14 @@ class ViTRunParameters:
     dropout: float = 0.5
     emb_dropout: float = 0.5
 
-    activation_fn: Type[Layer] = ReLUGeLUInterpolation
+    activation_fn: Type[Union[ReLUGeLUInterpolation, ReLUSiLUInterpolation]] = ReLUGeLUInterpolation
     activation_i: float = 0.0
     activation_s: float = 1.0
     activation_alpha: float = 0.0
-    norm_class: Optional[Type[Normalize]] = None
-    precision_class: Type[Layer] = None
+    norm_class: Optional[Type[Clamp]] = Clamp
+    precision_class: Optional[Type[ReducePrecision]] = ReducePrecision
+    noise_class: Type[GaussianNoise] = GaussianNoise
     precision: Optional[int] = None
-    noise_class: Type[Layer] = None
     leakage: Optional[float] = None
 
     dataset: Type[VisionDataset] = None
@@ -61,7 +61,6 @@ class ViTRunParameters:
     epochs: int = 150
 
     device: Optional[torch.device] = None
-    test_logs: bool = False
     test_run: bool = False
     tensorboard: bool = False
     save_data: bool = True
@@ -230,14 +229,18 @@ def run_model(parameters: ViTRunParameters):
         grayscale=not parameters.color
     )
 
-    nn_model_params = parameters.nn_model_params
-    weight_model_params = parameters.weight_model_params
-    nn_model_params["image_size"] = input_shape[-1]
-    nn_model_params["num_classes"] = len(classes)
-
     print(f"Creating Models...")
+    nn_model_params = parameters.nn_model_params
+    parameters.input_shape = input_shape[-1]
+    parameters.num_classes = len(classes)
     nn_model = ViT(**nn_model_params)
-    weight_model = WeightModel(**weight_model_params)
+    weight_model = WeightModel(
+        norm_class=parameters.norm_class,
+        precision_class=parameters.precision_class,
+        precision=parameters.precision,
+        noise_class=parameters.noise_class,
+        leakage=parameters.leakage,
+    )
     if parameters.tensorboard:
         weight_model.create_tensorboard(paths.tensorboard)
 
@@ -281,9 +284,6 @@ def run_model(parameters: ViTRunParameters):
 
     print(f"Starting Training...")
     for epoch in range(parameters.epochs):
-        if parameters.test_logs:
-            break
-
         train_loss, train_accuracy = train_on(
             model=nn_model,
             train_loader=train_loader,
@@ -386,13 +386,6 @@ def get_parameters(kwargs) -> ViTRunParameters:
         if hasattr(parameters, key):
             setattr(parameters, key, value)
 
-    select_class(parameters, 'norm_class', [None, Clamp])
-    select_class(parameters, 'precision_class', [None, ReducePrecision])
-    select_class(parameters, 'noise_class', [None, GaussianNoise])
-
-    check(parameters, "precision_class", "precision")
-    check(parameters, "noise_class", "leakage")
-
     return parameters
 
 
@@ -406,17 +399,11 @@ def run_parser():
     parser.add_argument("--depth", type=int, default=6)
     parser.add_argument("--activation_fn", type=str, default="gelu")
     parser.add_argument("--activation_i", type=float, default=1.0)
-    parser.add_argument("--norm_class", type=str, default=None)
-    parser.add_argument("--precision_class", type=str, default=None)
-    parser.add_argument("--precision", type=int, default=None)
-    parser.add_argument("--noise_class", type=str, default=None)
-    parser.add_argument("--leakage", type=float, default=None)
+    parser.add_argument("--precision", type=int, required=True)
+    parser.add_argument("--leakage", type=float, required=True)
 
-    parser.add_argument("--device", type=str, default=None)
     parser.add_argument("--color", type=str, default=str(ViTRunParameters.color))
 
-    parser.add_argument("--test_logs", action='store_true')
-    parser.set_defaults(test_logs=False)
     parser.add_argument("--test_run", action='store_true')
     parser.set_defaults(test_run=False)
     parser.add_argument("--tensorboard", action='store_true')

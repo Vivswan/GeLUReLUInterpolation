@@ -5,7 +5,7 @@ import json
 import math
 from dataclasses import dataclass
 from pathlib import Path
-from typing import Optional
+from typing import Optional, Tuple
 from typing import Type, Union, List
 
 import numpy as np
@@ -13,7 +13,6 @@ import torch
 import torch.backends.cudnn
 import torchinfo
 import torchvision
-from analogvnn.nn.Linear import Linear
 from analogvnn.nn.module.FullSequential import FullSequential
 from analogvnn.nn.module.Layer import Layer
 from analogvnn.nn.noise.GaussianNoise import GaussianNoise
@@ -36,219 +35,84 @@ from src.nn.ReLUGeLUInterpolation import ReLUGeLUInterpolation
 from src.nn.ReLUSiLUInterpolation import ReLUSiLUInterpolation
 from src.nn.WeightModel import WeightModel
 
-
-class ConvModel(FullSequential):
-    def __init__(
-            self,
-            input_shape, num_classes,
-            num_conv_layer: int = 6,
-            num_linear_layer: int = 3,
-            activation_fn: Type[Union[ReLUGeLUInterpolation, ReLUSiLUInterpolation]] = ReLUGeLUInterpolation,
-            activation_i: float = 1.0,
-            activation_s: float = 1.0,
-            activation_alpha: float = 0.0,
-            norm_class: Type[Normalize] = None,
-            precision_class: Type[Union[ReducePrecision]] = None,
-            precision: Union[int, None] = None,
-            noise_class: Type[Union[GaussianNoise]] = None,
-            leakage: Union[float, None] = None,
-    ):
-        super(ConvModel, self).__init__()
-
-        self.input_shape = input_shape
-        self.num_classes = num_classes
-        self.num_conv_layer = num_conv_layer
-        self.num_linear_layer = num_linear_layer
-        self.activation_fn = activation_fn
-        self.activation_i = activation_i
-        self.activation_s = activation_s
-        self.activation_alpha = activation_alpha
-        self.norm_class = norm_class
-        self.precision_class = precision_class
-        self.precision = precision
-        self.noise_class = noise_class
-        self.leakage = leakage
-
-        self.all_layers: List[nn.Module] = []
-
-        temp_x = torch.zeros(input_shape, requires_grad=False)
-        if self.num_conv_layer >= 1:
-            self.add_doa_layers()
-            self.all_layers.append(nn.Conv2d(
-                in_channels=self.input_shape[1],
-                out_channels=48,
-                kernel_size=(3, 3),
-                padding=(1, 1)
-            ))
-            temp_x = self.all_layers[-1](temp_x)
-            self.add_aod_layers()
-        if self.num_conv_layer >= 2:
-            self.add_doa_layers()
-            self.all_layers.append(nn.Conv2d(in_channels=48, out_channels=48, kernel_size=(3, 3)))
-            temp_x = self.all_layers[-1](temp_x)
-            self.add_aod_layers()
-            self.all_layers.append(nn.MaxPool2d(2, 2))
-            temp_x = self.all_layers[-1](temp_x)
-        if self.num_conv_layer >= 3:
-            self.all_layers.append(nn.Dropout(0.25))
-            self.add_doa_layers()
-            self.all_layers.append(nn.Conv2d(in_channels=48, out_channels=96, kernel_size=(3, 3), padding=(1, 1)))
-            temp_x = self.all_layers[-1](temp_x)
-            self.add_aod_layers()
-        if self.num_conv_layer >= 4:
-            self.add_doa_layers()
-            self.all_layers.append(nn.Conv2d(in_channels=96, out_channels=96, kernel_size=(3, 3)))
-            temp_x = self.all_layers[-1](temp_x)
-            self.add_aod_layers()
-            self.all_layers.append(nn.MaxPool2d(2, 2))
-            temp_x = self.all_layers[-1](temp_x)
-            self.all_layers.append(nn.Dropout(0.25))
-        if self.num_conv_layer >= 5:
-            self.add_doa_layers()
-            self.all_layers.append(nn.Conv2d(in_channels=96, out_channels=192, kernel_size=(3, 3), padding=(1, 1)))
-            temp_x = self.all_layers[-1](temp_x)
-            self.add_aod_layers()
-        if self.num_conv_layer >= 6:
-            self.add_doa_layers()
-            self.all_layers.append(nn.Conv2d(in_channels=192, out_channels=192, kernel_size=(3, 3)))
-            temp_x = self.all_layers[-1](temp_x)
-            self.add_aod_layers()
-            self.all_layers.append(nn.MaxPool2d(2, 2))
-            temp_x = self.all_layers[-1](temp_x)
-            self.all_layers.append(nn.Dropout(0.25))
-
-        self.all_layers.append(Flatten(start_dim=1))
-        temp_x = self.all_layers[-1](temp_x)
-
-        if self.num_linear_layer >= 3:
-            self.add_doa_layers()
-            self.all_layers.append(Linear(in_features=temp_x.shape[1], out_features=512))
-            temp_x = self.all_layers[-1](temp_x)
-            self.add_aod_layers()
-            self.all_layers.append(nn.Dropout(0.5))
-        if self.num_linear_layer >= 2:
-            self.add_doa_layers()
-            self.all_layers.append(Linear(in_features=temp_x.shape[1], out_features=256))
-            temp_x = self.all_layers[-1](temp_x)
-            self.add_aod_layers()
-            self.all_layers.append(nn.Dropout(0.5))
-
-        self.add_doa_layers()
-        self.all_layers.append(Linear(in_features=temp_x.shape[1], out_features=num_classes))
-        self.add_aod_layers()
-
-        self.conv2d_layers = pick_instanceof_module(self.all_layers, nn.Conv2d)
-        self.max_pool2d_layers = pick_instanceof_module(self.all_layers, nn.MaxPool2d)
-        self.linear_layers = pick_instanceof_module(self.all_layers, Linear)
-        self.activation_layers = pick_instanceof_module(self.all_layers, self.activation_fn)
-        self.norm_layers = pick_instanceof_module(self.all_layers, norm_class)
-        self.precision_layers = pick_instanceof_module(self.all_layers, precision_class)
-        self.noise_layers = pick_instanceof_module(self.all_layers, noise_class)
-
-        for i in self.linear_layers:
-            nn.init.kaiming_uniform_(i.weight)
-
-        self.add_sequence(*self.all_layers)
-
-    def add_doa_layers(self):
-        if self.norm_class is not None:
-            self.all_layers.append(self.norm_class())
-        if self.precision_class is not None:
-            self.all_layers.append(self.precision_class(precision=self.precision))
-        if self.noise_class is not None:
-            self.all_layers.append(self.noise_class(leakage=self.leakage, precision=self.precision))
-
-    def add_aod_layers(self):
-        if self.noise_class is not None:
-            self.all_layers.append(self.noise_class(leakage=self.leakage, precision=self.precision))
-        if self.norm_class is not None:
-            self.all_layers.append(self.norm_class())
-        if self.precision_class is not None:
-            self.all_layers.append(self.precision_class(precision=self.precision))
-
-        self.all_layers.append(self.activation_fn(
-            interpolate_factor=self.activation_i,
-            scaling_factor=self.activation_s,
-            alpha=self.activation_alpha
-        ))
-
-    def hyperparameters(self):
-        return {
-            'nn_model_class': self.__class__.__name__,
-
-            'input_shape': self.input_shape,
-            'num_classes': self.num_classes,
-            'num_conv_layer': self.num_conv_layer,
-            'num_linear_layer': self.num_linear_layer,
-            'activation_fn': self.activation_fn.__name__,
-            'activation_i': self.activation_i,
-            'activation_s': self.activation_s,
-            'activation_alpha': self.activation_alpha,
-            'norm_class_y': self.norm_class.__name__ if self.norm_class is not None else str(None),
-            'precision_class_y': self.precision_class.__name__ if self.precision_class is not None else str(None),
-            'precision_y': self.precision,
-            'noise_class_y': self.noise_class.__name__ if self.noise_class is not None else str(None),
-            'leakage_y': self.leakage,
-
-            'loss_class': self.loss_function.__class__.__name__,
-            'accuracy_fn': self.accuracy_function.__name__,
-            'optimiser_superclass': self.optimizer.__class__.__name__,
-        }
-
 @dataclass
 class ConvRunParameters:
+    model_name: Optional[str] = None
     name: Optional[str] = None
     data_folder: Optional[str] = None
 
     num_conv_layer: int = 6
     num_linear_layer: int = 3
-    activation_fn: Type[Layer] = ReLUGeLUInterpolation
-    activation_i: float = 0
-    activation_s: float = 1
-    activation_alpha: float = 0
-    norm_class: Optional[Type[Normalize]] = None
-    precision_class: Type[Layer] = None
+    activation_fn: Type[Union[ReLUGeLUInterpolation, ReLUSiLUInterpolation]] = ReLUGeLUInterpolation
+    activation_i: float = 0.0
+    activation_s: float = 1.0
+    activation_alpha: float = 0.0
+    norm_class: Optional[Type[Clamp]] = None
+    precision_class: Optional[Type[ReducePrecision]] = None
+    noise_class: Type[GaussianNoise] = None
     precision: Optional[int] = None
-    noise_class: Type[Layer] = None
     leakage: Optional[float] = None
 
     dataset: Type[VisionDataset] = torchvision.datasets.CIFAR10
+    input_shape: Tuple[int, int] = (32, 32)
+    num_classes: int = 10
     color: bool = True
+    
+    loss_function = nn.CrossEntropyLoss
+    accuracy_function: str = None
+    optimizer: Type[optim.Adam] = optim.Adam
+    lr: float = 1e-3
     batch_size: int = 512
     epochs: int = 200
-    lr: float = 1e-3
+    last_epoch: Optional[int] = 0
 
     device: Optional[torch.device] = None
-    test_logs: bool = False
+    is_cuda: bool = False
     test_run: bool = False
     tensorboard: bool = False
     save_data: bool = True
     timestamp: str = None
 
-    @property
-    def nn_model_params(self):
-        return {
-            "num_linear_layer": self.num_linear_layer,
-            "activation_fn": self.activation_fn,
-            "activation_i": self.activation_i,
-            "activation_s": self.activation_s,
-            "activation_alpha": self.activation_alpha,
-            "norm_class": self.norm_class,
-            "precision_class": self.precision_class,
-            "precision": self.precision,
-            "noise_class": self.noise_class,
-            "leakage": self.leakage,
-        }
+    def create_norm_layer(self) -> Optional[Clamp]:
+        if self.norm_class is None:
+            return None
+        return self.norm_class()
 
-    @property
-    def weight_model_params(self):
-        return {
-            "norm_class": self.norm_class,
-            "precision_class": self.precision_class,
-            "precision": self.precision,
-            "noise_class": self.noise_class,
-            "leakage": self.leakage,
-        }
+    def create_precision_layer(self) -> Optional[ReducePrecision]:
+        if self.precision_class is None:
+            return None
+        return self.precision_class(precision=self.precision)
+
+    def create_noise_layer(self) -> Optional[GaussianNoise]:
+        if self.noise_class is None:
+            return None
+        return self.noise_class(leakage=self.leakage, precision=self.precision)
+
+    def get_activation_fn(self) -> Layer:
+        return self.activation_fn(
+            interpolate_factor=self.activation_i,
+            scaling_factor=self.activation_s,
+            alpha=self.activation_alpha
+        )
+
+    def create_doa_layer(self) -> List[Layer]:
+        layer_list = [
+            self.create_norm_layer(),
+            self.create_precision_layer(),
+            self.create_noise_layer(),
+        ]
+        layer_list = [x for x in layer_list if x is not None]
+        return layer_list
+
+    def create_aod_layer(self) -> List[Layer]:
+        layer_list = [
+            self.create_noise_layer(),
+            self.create_norm_layer(),
+            self.create_precision_layer(),
+        ]
+        layer_list = [x for x in layer_list if x is not None]
+        return layer_list
+
 
     @property
     def json(self):
@@ -256,6 +120,121 @@ class ConvRunParameters:
 
     def __repr__(self):
         return f"{self.__class__.__name__}({json.dumps(self.json)})"
+
+class ConvModel(FullSequential):
+    def __init__(self, hyperparameters: ConvRunParameters):
+        super(ConvModel, self).__init__()
+        self.hyperparameters = hyperparameters
+
+        self.all_layers: List[nn.Module] = []
+
+        temp_x = torch.zeros(self.hyperparameters.input_shape, requires_grad=False)
+        if self.num_conv_layer >= 1:
+            conv2d = nn.Conv2d(
+                in_channels=self.hyperparameters.input_shape[1],
+                out_channels=48,
+                kernel_size=(3, 3),
+                padding=(1, 1)
+            )
+            self.all_layers += [
+                *self.hyperparameters.create_doa_layer(),
+                conv2d,
+                *self.hyperparameters.create_aod_layer(),
+                self.hyperparameters.get_activation_fn(),
+            ]
+            temp_x = conv2d(temp_x)
+        if self.num_conv_layer >= 2:
+            conv2d = nn.Conv2d(in_channels=48, out_channels=48, kernel_size=(3, 3))
+            max_pool2d = nn.MaxPool2d(2, 2)
+            self.all_layers += [
+                *self.hyperparameters.create_doa_layer(),
+                conv2d,
+                *self.hyperparameters.create_aod_layer(),
+                self.hyperparameters.get_activation_fn(),
+                max_pool2d,
+            ]
+            temp_x = conv2d(temp_x)
+            temp_x = max_pool2d(temp_x)
+        if self.num_conv_layer >= 3:
+            conv2d = nn.Conv2d(in_channels=48, out_channels=96, kernel_size=(3, 3), padding=(1, 1))
+            self.all_layers += [
+                nn.Dropout(0.25),
+                *self.hyperparameters.create_doa_layer(),
+                conv2d,
+                *self.hyperparameters.create_aod_layer(),
+                self.hyperparameters.get_activation_fn(),
+            ]
+            temp_x = conv2d(temp_x)
+        if self.num_conv_layer >= 4:
+            conv2d = nn.Conv2d(in_channels=96, out_channels=96, kernel_size=(3, 3))
+            max_pool2d = nn.MaxPool2d(2, 2)
+            self.all_layers += [
+                *self.hyperparameters.create_doa_layer(),
+                conv2d,
+                *self.hyperparameters.create_aod_layer(),
+                self.hyperparameters.get_activation_fn(),
+                max_pool2d,
+            ]
+            temp_x = conv2d(temp_x)
+            temp_x = max_pool2d(temp_x)
+        if self.num_conv_layer >= 5:
+            conv2d = nn.Conv2d(in_channels=96, out_channels=192, kernel_size=(3, 3), padding=(1, 1))
+            self.all_layers += [
+                nn.Dropout(0.25),
+                *self.hyperparameters.create_doa_layer(),
+                conv2d,
+                *self.hyperparameters.create_aod_layer(),
+                self.hyperparameters.get_activation_fn(),
+            ]
+            temp_x = conv2d(temp_x)
+        if self.num_conv_layer >= 6:
+            conv2d = nn.Conv2d(in_channels=192, out_channels=192, kernel_size=(3, 3))
+            max_pool2d = nn.MaxPool2d(2, 2)
+            self.all_layers += [
+                *self.hyperparameters.create_doa_layer(),
+                conv2d,
+                *self.hyperparameters.create_aod_layer(),
+                self.hyperparameters.get_activation_fn(),
+                max_pool2d,
+            ]
+            temp_x = conv2d(temp_x)
+            temp_x = max_pool2d(temp_x)
+
+        self.all_layers.append(Flatten(start_dim=1))
+        temp_x = self.all_layers[-1](temp_x)
+
+        if self.num_linear_layer >= 3:
+            linear = nn.Linear(in_features=temp_x.shape[1], out_features=512)
+            self.all_layers += [
+                *self.hyperparameters.create_doa_layer(),
+                linear,
+                *self.hyperparameters.create_aod_layer(),
+                self.hyperparameters.get_activation_fn(),
+                nn.Dropout(0.5),
+            ]
+            temp_x = linear(temp_x)
+        if self.num_linear_layer >= 2:
+            linear = nn.Linear(in_features=temp_x.shape[1], out_features=256)
+            self.all_layers += [
+                *self.hyperparameters.create_doa_layer(),
+                linear,
+                *self.hyperparameters.create_aod_layer(),
+                self.hyperparameters.get_activation_fn(),
+                nn.Dropout(0.5),
+            ]
+            temp_x = linear(temp_x)
+
+
+        self.all_layers += [
+            *self.hyperparameters.create_doa_layer(),
+            nn.Linear(in_features=temp_x.shape[1], out_features=self.hyperparameters.num_classes),
+            *self.hyperparameters.create_aod_layer(),
+        ]
+
+        for i in pick_instanceof_module(self.all_layers, nn.Linear):
+            nn.init.kaiming_uniform_(i.weight)
+
+        self.add_sequence(*self.all_layers)
 
 
 def run_model(parameters: ConvRunParameters):
@@ -298,43 +277,34 @@ def run_model(parameters: ConvRunParameters):
         grayscale=not parameters.color
     )
 
-    nn_model_params = parameters.nn_model_params
-    weight_model_params = parameters.weight_model_params
-    nn_model_params["input_shape"] = input_shape
-    nn_model_params["num_classes"] = len(classes)
-
     print(f"Creating Models...")
-    nn_model = ConvModel(**nn_model_params)
-    weight_model = WeightModel(**weight_model_params)
+    parameters.input_shape = input_shape
+    parameters.num_classes = len(classes)
+    nn_model = ConvModel(hyperparameters=parameters)
+    weight_model = WeightModel(
+        norm_class=parameters.norm_class,
+        precision_class=parameters.precision_class,
+        precision=parameters.precision,
+        noise_class=parameters.noise_class,
+        leakage=parameters.leakage,
+    )
     if parameters.tensorboard:
         nn_model.create_tensorboard(paths.tensorboard)
 
     PseudoParameter.parametrize_module(nn_model, transformation=weight_model)
 
-    nn_model.loss_function = nn.CrossEntropyLoss()
+    nn_model.loss_function = parameters.loss_function()
     nn_model.accuracy_function = cross_entropy_loss_accuracy
-    nn_model.optimizer = optim.Adam(params=nn_model.parameters(), lr=parameters.lr)
+    parameters.accuracy_function = nn_model.accuracy_function.__name__
+    nn_model.optimizer = parameters.optimizer(params=nn_model.parameters(), lr=parameters.lr)
 
     nn_model.compile(device=device, layer_data=True)
     weight_model.compile(device=device)
 
-    parameter_log = {
-        'dataset': parameters.dataset.__name__,
-        'batch_size': parameters.batch_size,
-        'is_cuda': is_cuda,
-        'color': parameters.color,
-        'epochs': parameters.epochs,
-
-        **nn_model.hyperparameters(),
-        **weight_model.hyperparameters(),
-    }
-
     print(f"Creating Log File...")
     with open(log_file, "a+", encoding="utf-8") as file:
         file.write(json.dumps(parameters.json, sort_keys=True, indent=2) + "\n\n")
-        file.write(json.dumps(parameter_log, sort_keys=True, indent=2) + "\n\n")
         file.write(str(nn_model.optimizer) + "\n\n")
-
         file.write(str(nn_model) + "\n\n")
         file.write(str(weight_model) + "\n\n")
         file.write(torchinfo.summary(nn_model, input_size=input_shape, device=device).__repr__() + "\n\n")
@@ -352,9 +322,6 @@ def run_model(parameters: ConvRunParameters):
 
     print(f"Starting Training...")
     for epoch in range(parameters.epochs):
-        if parameters.test_logs:
-            break
-
         train_loss, train_accuracy = nn_model.train_on(
             train_loader,
             epoch=epoch,
@@ -379,7 +346,7 @@ def run_model(parameters: ConvRunParameters):
                     f' Testing Accuracy: {100. * test_accuracy:.0f}%\n'
         print(print_str)
 
-        parameter_log["last_epoch"] = epoch
+        parameters.last_epoch = epoch
         with open(log_file, "a+", encoding="utf-8") as file:
             file.write(print_str)
 
@@ -390,15 +357,12 @@ def run_model(parameters: ConvRunParameters):
             break
 
     if parameters.save_data:
-        torch.save(str(nn_model), f"{paths.model_data}/{parameter_log['last_epoch']}_str_nn_model")
-        torch.save(str(weight_model), f"{paths.model_data}/{parameter_log['last_epoch']}_str_weight_model")
-
-        torch.save(parameters.json, f"{paths.model_data}/{parameter_log['last_epoch']}_parameters_json")
-        torch.save(parameter_log, f"{paths.model_data}/{parameter_log['last_epoch']}_parameter_log")
-        torch.save(loss_accuracy, f"{paths.model_data}/{parameter_log['last_epoch']}_loss_accuracy")
+        torch.save(str(nn_model), f"{paths.model_data}/{parameters.last_epoch}_str_nn_model")
+        torch.save(str(weight_model), f"{paths.model_data}/{parameters.last_epoch}_str_weight_model")
+        torch.save(parameters.json, f"{paths.model_data}/{parameters.last_epoch}_parameters_json")
+        torch.save(loss_accuracy, f"{paths.model_data}/{parameters.last_epoch}_loss_accuracy")
 
     if parameters.tensorboard:
-        parameter_log["input_shape"] = "_".join([str(x) for x in parameter_log["input_shape"]])
         metric_dict = {
             "train_loss": loss_accuracy["train_loss"][-1],
             "train_accuracy": loss_accuracy["train_accuracy"][-1],
@@ -410,7 +374,7 @@ def run_model(parameters: ConvRunParameters):
             "max_test_accuracy": np.max(loss_accuracy["test_accuracy"]),
         }
         nn_model.tensorboard.tensorboard.add_hparams(
-            hparam_dict=parameter_log,
+            hparam_dict=parameters.json,
             metric_dict=metric_dict
         )
 
@@ -440,13 +404,6 @@ def get_parameters(kwargs) -> ConvRunParameters:
     else:
         raise ValueError("Invalid value for activation_fn")
 
-    if kwargs["dataset"].lower() == "cifar10":
-        kwargs["dataset"] = torchvision.datasets.CIFAR10
-    elif kwargs["dataset"].lower() == "cifar100":
-        kwargs["dataset"] = torchvision.datasets.CIFAR100
-    else:
-        raise ValueError("Invalid value for dataset")
-    
     for key, value in kwargs.items():
         if hasattr(parameters, key):
             setattr(parameters, key, value)
@@ -466,7 +423,6 @@ def run_parser():
     parser.add_argument("--name", type=str, default=None)
     parser.add_argument("--timestamp", type=str, default=None)
     parser.add_argument("--data_folder", type=str, required=True)
-    parser.add_argument("--dataset", type=str, default="CIFAR10")
 
     parser.add_argument("--num_conv_layer", type=int, default=6)
     parser.add_argument("--num_linear_layer", type=int, default=3)
@@ -481,11 +437,8 @@ def run_parser():
     parser.add_argument("--leakage", type=float, default=None)
 
     parser.add_argument("--lr", type=float, default=ConvRunParameters.lr)
-    parser.add_argument("--device", type=str, default=None)
     parser.add_argument("--color", type=str, default=str(ConvRunParameters.color))
 
-    parser.add_argument("--test_logs", action='store_true')
-    parser.set_defaults(test_logs=False)
     parser.add_argument("--test_run", action='store_true')
     parser.set_defaults(test_run=False)
     parser.add_argument("--tensorboard", action='store_true')
