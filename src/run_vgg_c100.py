@@ -1,10 +1,10 @@
 import argparse
 import dataclasses
-from functools import partial
 import hashlib
 import json
 import math
 from dataclasses import dataclass
+from functools import partial
 from pathlib import Path
 from typing import Optional, Dict, Tuple, cast
 from typing import Type, Union, List
@@ -66,7 +66,7 @@ class VGGRunParameters:
     loss_function = nn.CrossEntropyLoss
     accuracy_function: str = None
     optimizer: Type[optim.Optimizer] = partial(optim.Adam, lr=0.001, weight_decay=0.0001)
-    batch_size: int =  500
+    batch_size: int = 500
     epochs: int = 200
     last_epoch: Optional[int] = 0
 
@@ -215,12 +215,11 @@ def run_model(parameters: VGGRunParameters):
         std=[0.2023, 0.1994, 0.2010],
     )
     train_transform = transforms.Compose([
-            transforms.RandomCrop(32, padding=4, padding_mode='reflect'),
-            transforms.RandomHorizontalFlip(),
-            # transforms.RandomVerticalFlip(),
-            transforms.RandomRotation(15),
-            transforms.ToTensor(),
-            normalize
+        transforms.RandomCrop(32, padding=4, padding_mode='reflect'),
+        transforms.RandomHorizontalFlip(),
+        transforms.RandomRotation(15),
+        transforms.ToTensor(),
+        normalize
     ])
     test_transform = transforms.Compose([
         transforms.ToTensor(),
@@ -313,8 +312,8 @@ def run_model(parameters: VGGRunParameters):
 
         if train_accuracy < (1.25 / 100) and epoch >= 9:
             break
-        
-        if test_accuracy < (max(loss_accuracy["test_accuracy"]) - 5/100):
+
+        if test_accuracy < (max(loss_accuracy["test_accuracy"]) - 5 / 100):
             break
 
         if parameters.test_run:

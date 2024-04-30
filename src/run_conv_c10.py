@@ -17,7 +17,6 @@ from analogvnn.nn.module.FullSequential import FullSequential
 from analogvnn.nn.module.Layer import Layer
 from analogvnn.nn.noise.GaussianNoise import GaussianNoise
 from analogvnn.nn.normalize.Clamp import Clamp
-from analogvnn.nn.normalize.Normalize import Normalize
 from analogvnn.nn.precision.ReducePrecision import ReducePrecision
 from analogvnn.parameter.PseudoParameter import PseudoParameter
 from analogvnn.utils.is_cpu_cuda import is_cpu_cuda
@@ -35,6 +34,7 @@ from src.fn.pick_instanceof_module import pick_instanceof_module
 from src.nn.ReLUGeLUInterpolation import ReLUGeLUInterpolation
 from src.nn.ReLUSiLUInterpolation import ReLUSiLUInterpolation
 from src.nn.WeightModel import WeightModel
+
 
 @dataclass
 class ConvRunParameters:
@@ -58,7 +58,7 @@ class ConvRunParameters:
     input_shape: Tuple[int, int] = (32, 32)
     num_classes: int = 10
     color: bool = True
-    
+
     loss_function = nn.CrossEntropyLoss
     accuracy_function: str = None
     optimizer: Type[optim.Adam] = optim.Adam
@@ -114,13 +114,13 @@ class ConvRunParameters:
         layer_list = [x for x in layer_list if x is not None]
         return layer_list
 
-
     @property
     def json(self):
         return json.loads(json.dumps(dataclasses.asdict(self), default=str))
 
     def __repr__(self):
         return f"{self.__class__.__name__}({json.dumps(self.json)})"
+
 
 class ConvModel(FullSequential):
     def __init__(self, hyperparameters: ConvRunParameters):
@@ -225,7 +225,6 @@ class ConvModel(FullSequential):
             ]
             temp_x = linear(temp_x)
 
-
         self.all_layers += [
             *self.hyperparameters.create_doa_layer(),
             nn.Linear(in_features=temp_x.shape[1], out_features=self.hyperparameters.num_classes),
@@ -276,7 +275,7 @@ def run_model(parameters: ConvRunParameters):
         transform.append(transforms.Grayscale())
     transform.append(transforms.ToTensor())
     transform = transforms.Compose(transform)
-    
+
     train_loader, test_loader, input_shape, classes = load_vision_dataset(
         dataset=parameters.dataset,
         path=paths.dataset,

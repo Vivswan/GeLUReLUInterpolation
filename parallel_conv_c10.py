@@ -55,7 +55,7 @@ RUN_LIST = {
     # "fli0": "leakage:0.8,num_conv_layer:0,activation_s:1,norm_class:Clamp,precision_class:ReducePrecision,noise_class:GaussianNoise,lr:0.001,activation_alpha:0",
     # "lpli": "num_conv_layer:6,num_linear_layer:3,activation_s:1,norm_class:Clamp,precision_class:ReducePrecision,noise_class:GaussianNoise,leakage:0.8,activation_fn:gelu,activation_alpha:0",
     # "lrelu": "num_conv_layer:6,num_linear_layer:3,activation_i:0,activation_s:1,norm_class:Clamp,precision_class:ReducePrecision,noise_class:GaussianNoise,activation_fn:gelu,lr:0.001",
-    
+
     # CIFAR-100
     "c100gpli": "num_conv_layer:6,num_linear_layer:3,activation_fn:gelu,activation_s:1,norm_class:Clamp,precision_class:ReducePrecision,noise_class:GaussianNoise,lr:0.001,activation_alpha:0,precision:64",
 }

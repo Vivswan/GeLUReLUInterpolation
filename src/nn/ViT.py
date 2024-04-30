@@ -1,26 +1,21 @@
-
-from functools import partial
-import json
 import dataclasses
-from typing import List, Tuple, Type, Optional, Union
+import json
+from typing import List, Tuple, Type, Optional
 
 import torch
 import torchvision
-from torchvision.datasets import VisionDataset
-from torch import optim
-
 from analogvnn.nn.module.Layer import Layer
 from analogvnn.nn.noise.GaussianNoise import GaussianNoise
 from analogvnn.nn.normalize.Clamp import Clamp
-from analogvnn.nn.normalize.Normalize import Normalize
 from analogvnn.nn.precision.ReducePrecision import ReducePrecision
 from einops import rearrange, repeat
 from einops.layers.torch import Rearrange
 from torch import nn
+from torch import optim
+from torchvision.datasets import VisionDataset
 
 from src.nn.ReGLUGeGLUInterpolation import ReGLUGeGLUInterpolation
 from src.nn.ReLUGeLUInterpolation import ReLUGeLUInterpolation
-from src.nn.ReLUSiLUInterpolation import ReLUSiLUInterpolation
 
 
 @dataclasses.dataclass
@@ -39,7 +34,7 @@ class ViTRunParameters:
     dropout: float = 0.5
     emb_dropout: float = 0.5
 
-    activation_fn: Type[Union[ReLUGeLUInterpolation, ReLUSiLUInterpolation, ReGLUGeGLUInterpolation]] = ReLUGeLUInterpolation
+    activation_fn = ReLUGeLUInterpolation
     activation_i: float = 0.0
     activation_s: float = 1.0
     activation_alpha: float = 0.0
@@ -84,7 +79,7 @@ class ViTRunParameters:
             scaling_factor=self.activation_s,
             alpha=self.activation_alpha
         )
-    
+
     def create_doa_layer(self) -> List[Layer]:
         layer_list = [
             self.create_norm_layer(),
@@ -100,6 +95,7 @@ class ViTRunParameters:
 
     def __repr__(self):
         return f"{self.__class__.__name__}({json.dumps(self.json)})"
+
 
 # helpers
 def pair(t):
@@ -257,10 +253,10 @@ class ViT(nn.Module):
 
     def forward(self, img):
         x = img
-        
+
         for layer in self.doa_layers:
             x = layer(x)
-        
+
         x = self.to_patch_embedding(x)
         b, n, _ = x.shape
 

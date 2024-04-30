@@ -31,11 +31,11 @@ combination_dict = OrderedDict({
 RUN_LIST = {
     # "gelu_d": "leakage:0.8,norm_class:Clamp,precision_class:ReducePrecision,noise_class:GaussianNoise,activation_fn:gelu,dataset:cifar10",
     # "silu_d": "leakage:0.8,norm_class:Clamp,precision_class:ReducePrecision,noise_class:GaussianNoise,activation_fn:silu,dataset:cifar10",
-    
+
     # "gelu_4n": "depth:4,activation_fn:gelu,dataset:cifar10",
     # "silu_4n": "depth:4,activation_fn:silu,dataset:cifar10",
     # "gege_4n": "depth:4,activation_fn:gege,dataset:cifar10",
-    
+
     "c100_gelu_4n": "depth:4,activation_fn:gelu,dataset:cifar100,precision:64,color:True",
 }
 

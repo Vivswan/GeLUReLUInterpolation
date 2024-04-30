@@ -10,7 +10,6 @@ import matplotlib.colors
 import numpy as np
 import seaborn
 import torch
-from analogvnn.nn.noise.GaussianNoise import GaussianNoise
 from matplotlib import pyplot as plt
 from seaborn.palettes import _color_to_rgb, _ColorPalette
 from tqdm import tqdm
@@ -71,36 +70,8 @@ def sanitise_data(data):
         data["min_train_log_loss"] = np.log(np.min(data["loss_accuracy"]["train_loss"]))
         data["min_test_log_loss"] = np.log(np.min(data["loss_accuracy"]["test_loss"]))
 
-    if "precision_y" not in data["parameter_log"]:
-        data["parameter_log"]["precision_y"] = data["parameter_log"]["precision"]
-        data["parameter_log"]["precision_class_y"] = data["parameter_log"]["precision_class"]
-        data["parameter_log"]["leakage_y"] = data["parameter_log"]["leakage"]
-        data["parameter_log"]["norm_class_y"] = data["parameter_log"]["norm_class"]
-        data["parameter_log"]["noise_class_y"] = data["parameter_log"]["noise_class"]
-
-    py = data["parameter_log"]["precision_y"]
-    pw = data["parameter_log"]["precision_w"]
-    data["bit_precision_y"] = 32.0 if py is None else math.log2(py)
-    data["bit_precision_w"] = 32.0 if pw is None else math.log2(pw)
-
-    if data["parameter_log"]["precision_class_w"] == 'None':
-        data["parameter_log"]["precision_class_w"] = "Digital"
-    if data["parameter_log"]["precision_class_y"] == 'None':
-        data["parameter_log"]["precision_class_y"] = "Digital"
-
-    if data["parameter_log"]["precision_y"] is not None \
-            and data["parameter_log"]["leakage_y"] is not None:
-        data["std_y"] = GaussianNoise.calc_std(
-            data["parameter_log"]["leakage_y"],
-            data["parameter_log"]["precision_y"]
-        )
-
-    if data["parameter_log"]["precision_w"] is not None \
-            and data["parameter_log"]["leakage_w"] is not None:
-        data["std_w"] = GaussianNoise.calc_std(
-            data["parameter_log"]["leakage_w"],
-            data["parameter_log"]["precision_w"]
-        )
+    py = data["parameters_json"]["precision"]
+    data["bit_precision"] = 32.0 if py is None else math.log2(py)
 
     return data
 
@@ -154,6 +125,10 @@ def get_filtered_data(data, filters):
         for filter_key, filter_value in filters.items():
             if isinstance(filter_value, str):
                 if not any([get_key(data[key], filter_key) == i for i in filter_value.split("|")]):
+                    check = False
+                    break
+            elif isinstance(filter_value, list):
+                if get_key(data[key], filter_key) not in filter_value:
                     check = False
                     break
             else:
@@ -317,8 +292,8 @@ def post_plot(plot_data, y_lim=(0, 10000)):
 
     name = f"{plot_data['prefix']} - {run_name} - {x_axis_title} vs {y_axis_title}{filter_text}{colorbar_text}{subsection_text}"
 
-    plot_data["fig"].savefig(f'{location}/{name}.pdf', dpi=plot_data["fig"].dpi, transparent=True)
-    plot_data["fig"].savefig(f'{location}/{name}.svg', dpi=plot_data["fig"].dpi, transparent=True)
+    # plot_data["fig"].savefig(f'{location}/{name}.pdf', dpi=plot_data["fig"].dpi, transparent=True)
+    # plot_data["fig"].savefig(f'{location}/{name}.svg', dpi=plot_data["fig"].dpi, transparent=True)
     plot_data["fig"].savefig(f'{location}/{name}.png', dpi=plot_data["fig"].dpi, transparent=True)
 
     plt.close('all')
@@ -621,14 +596,49 @@ if __name__ == '__main__':
             continue
         compile_data(i)
 
-    create_line_figure_max(
-        f"{location}/conv_gelu_pli.pt",
-        "parameter_log.activation_i",
+    create_line_figure(
+        f"{location}/vgg_c100_li.pt",
+        "parameters_json.activation_i",
         "max_test_accuracy",
-        colorbar="bit_precision_w",
+        colorbar="parameters_json.leakage",
         name="12",
         size_factor=(6.5 * 1 / 3, 1.61803398874),
     )
+    create_line_figure(
+        f"{location}/vgg_c100_li.pt",
+        "parameters_json.activation_i",
+        "max_test_accuracy",
+        colorbar="parameters_json.leakage",
+        name="12",
+        size_factor=(6.5 * 1 / 3, 1.61803398874),
+        filters={
+            "parameters_json.leakage": [0.01, 0.02, 0.03, 0.04, 0.05, 0.06, 0.07, 0.08, 0.09]
+        }
+    )
+    # create_line_figure_max(
+    #     f"{location}/vit_c100_gelu_4n.pt",
+    #     "parameters_json.activation_i",
+    #     "max_test_accuracy",
+    #     colorbar="parameters_json.leakage",
+    #     name="12",
+    #     size_factor=(6.5 * 1 / 3, 1.61803398874),
+    # )
+    # create_line_figure_max(
+    #     f"{location}/vit_gelu_4n.pt",
+    #     "parameter_log.activation_i",
+    #     "max_test_accuracy",
+    #     colorbar="parameter_log.color",
+    #     name="31",
+    #     size_factor=(6.5 * 1 / 3, 1.61803398874),
+    # )
+    # create_line_figure_max(
+    #     f"{location}/c100_conv_gpli.pt",
+    #     "parameter_log.activation_i",
+    #     "max_test_accuracy",
+    #     colorbar='bit_precision_w',
+    #     name="12",
+    #     size_factor=(6.5 * 1 / 3, 1.61803398874),
+    # )
     # create_line_figure_max(
     #     f"{location}/conv_lrelu.pt",
     #     "parameters_json.activation_alpha",
@@ -655,7 +665,7 @@ if __name__ == '__main__':
     #     size_factor=(6.5 * 1 / 3, 1.61803398874),
     # )
     # create_line_figure_max(
-    #     f"{location}/gelu_conv_pli_results.pt",
+    #     f"{location}/gelu_conv_pli.pt",
     #     "parameter_log.activation_i",
     #     "max_test_accuracy",
     #     colorbar="parameter_log.leakage_w",
@@ -663,7 +673,7 @@ if __name__ == '__main__':
     #     size_factor=(6.5 * 1 / 3, 1.61803398874),
     # )
     # create_line_figure_max(
-    #     f"{location}/silu_conv_pli_results.pt",
+    #     f"{location}/silu_conv_pli.pt",
     #     "parameter_log.activation_i",
     #     "max_test_accuracy",
     #     colorbar="parameter_log.leakage_w",
@@ -672,7 +682,7 @@ if __name__ == '__main__':
     # )
     #
     # create_line_figure_max(
-    #     f"{location}/gelu_conv_cli1_results.pt",
+    #     f"{location}/gelu_conv_cli1.pt",
     #     "parameter_log.activation_i",
     #     "max_test_accuracy",
     #     colorbar="parameter_log.num_conv_layer",
@@ -681,7 +691,7 @@ if __name__ == '__main__':
     # )
     #
     # create_line_figure_max(
-    #     f"{location}/silu_conv_cli1_results.pt",
+    #     f"{location}/silu_conv_cli1.pt",
     #     "parameter_log.activation_i",
     #     "max_test_accuracy",
     #     colorbar="parameter_log.num_conv_layer",
@@ -690,7 +700,7 @@ if __name__ == '__main__':
     # )
     #
     # create_line_figure_max(
-    #     f"{location}/gelu_conv_fli0_results.pt",
+    #     f"{location}/gelu_conv_fli0.pt",
     #     "parameter_log.activation_i",
     #     "max_test_accuracy",
     #     colorbar="parameter_log.num_linear_layer",
@@ -699,7 +709,7 @@ if __name__ == '__main__':
     # )
     #
     # create_line_figure_max(
-    #     f"{location}/silu_conv_fli0_results.pt",
+    #     f"{location}/silu_conv_fli0.pt",
     #     "parameter_log.activation_i",
     #     "max_test_accuracy",
     #     colorbar="parameter_log.num_linear_layer",

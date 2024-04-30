@@ -4,11 +4,10 @@ import json
 import math
 from pathlib import Path
 
-import numpy as np
 import torch.backends.cudnn
 import torchvision
 from analogvnn.utils.is_cpu_cuda import is_cpu_cuda
-from torch import optim, nn
+from torch import nn
 from torch.optim import Optimizer
 from torch.utils.data import DataLoader
 from torchvision.transforms import transforms
@@ -20,7 +19,6 @@ from src.nn.ReGLUGeGLUInterpolation import ReGLUGeGLUInterpolation
 from src.nn.ReLUGeLUInterpolation import ReLUGeLUInterpolation
 from src.nn.ReLUSiLUInterpolation import ReLUSiLUInterpolation
 from src.nn.ViT import ViT, ViTRunParameters
-from src.nn.WeightModel import WeightModel
 
 
 def train_on(
@@ -150,7 +148,7 @@ def run_model(parameters: ViTRunParameters):
         transform.append(transforms.Grayscale())
     transform.append(transforms.ToTensor())
     transform = transforms.Compose(transform)
-    
+
     train_loader, test_loader, input_shape, classes = load_vision_dataset(
         dataset=parameters.dataset,
         path=paths.dataset,

@@ -3,16 +3,15 @@ from typing import Tuple, Type
 
 from torch.utils.data import DataLoader
 from torchvision.datasets import VisionDataset
-from torchvision.transforms import transforms
 
 
 def load_vision_dataset(
-    dataset: Type[VisionDataset],
-    path,
-    batch_size,
-    is_cuda=False,
-    train_transform=None,
-    test_transform=None,
+        dataset: Type[VisionDataset],
+        path,
+        batch_size,
+        is_cuda=False,
+        train_transform=None,
+        test_transform=None,
 ) -> Tuple[DataLoader, DataLoader, list[int], tuple[str]]:
     dataset_kwargs = {
         'batch_size': batch_size,
