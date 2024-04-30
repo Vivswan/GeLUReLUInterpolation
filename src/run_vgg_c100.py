@@ -205,6 +205,11 @@ def run_model(parameters: VGGRunParameters):
     parameters.timestamp = paths.timestamp
     log_file = paths.logs.joinpath(f"{paths.name}_logs.txt")
 
+    if paths.tensorboard.exists():
+        for file in paths.tensorboard.iterdir():
+            file.unlink()
+        paths.tensorboard.rmdir()
+
     print(f"Timestamp: {paths.timestamp}")
     print(f"Storage name: {paths.name}")
     print()
@@ -247,8 +252,6 @@ def run_model(parameters: VGGRunParameters):
         noise_class=parameters.noise_class,
         leakage=parameters.leakage,
     )
-    if parameters.tensorboard:
-        nn_model.create_tensorboard(paths.tensorboard)
 
     PseudoParameter.parametrize_module(nn_model, transformation=weight_model)
 
@@ -269,9 +272,6 @@ def run_model(parameters: VGGRunParameters):
         file.write(str(weight_model) + "\n\n")
         file.write(torchinfo.summary(nn_model, input_size=input_shape, device=device).__repr__() + "\n\n")
         file.write(torchinfo.summary(weight_model, input_size=(1, 1), device=device).__repr__() + "\n\n")
-
-    if parameters.tensorboard:
-        nn_model.tensorboard.tensorboard.add_text("parameter", json.dumps(parameters.json, sort_keys=True, indent=2))
 
     loss_accuracy = {
         "train_loss": [],
@@ -325,22 +325,6 @@ def run_model(parameters: VGGRunParameters):
         torch.save(parameters.json, f"{paths.model_data}/{parameters.last_epoch}_parameters_json")
         torch.save(loss_accuracy, f"{paths.model_data}/{parameters.last_epoch}_loss_accuracy")
 
-    if parameters.tensorboard:
-        metric_dict = {
-            "train_loss": loss_accuracy["train_loss"][-1],
-            "train_accuracy": loss_accuracy["train_accuracy"][-1],
-            "test_loss": loss_accuracy["test_loss"][-1],
-            "test_accuracy": loss_accuracy["test_accuracy"][-1],
-            "min_train_loss": np.min(loss_accuracy["train_loss"]),
-            "max_train_accuracy": np.max(loss_accuracy["train_accuracy"]),
-            "min_test_loss": np.min(loss_accuracy["test_loss"]),
-            "max_test_accuracy": np.max(loss_accuracy["test_accuracy"]),
-        }
-        nn_model.tensorboard.tensorboard.add_hparams(
-            hparam_dict=parameters.json,
-            metric_dict=metric_dict
-        )
-
     with open(log_file, "a+", encoding="utf-8") as file:
         file.write("Run Completed Successfully...")
     print()
@@ -372,8 +356,6 @@ def run_parser():
 
     parser.add_argument("--test_run", action='store_true')
     parser.set_defaults(test_run=False)
-    parser.add_argument("--tensorboard", action='store_true')
-    parser.set_defaults(tensorboard=False)
     parser.add_argument("--save_data", action='store_true')
     parser.set_defaults(save_data=False)
     kwargs = vars(parser.parse_known_args()[0])
