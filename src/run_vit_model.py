@@ -20,6 +20,7 @@ from torch import optim, nn
 from torch.optim import Optimizer
 from torch.utils.data import DataLoader
 from torchvision.datasets import VisionDataset
+from torchvision.transforms import transforms
 
 from src.dataloaders.load_vision_dataset import load_vision_dataset
 from src.fn.cross_entropy_loss_accuracy import cross_entropy_loss_accuracy
@@ -221,12 +222,19 @@ def run_model(parameters: ViTRunParameters):
     print()
 
     print(f"Loading Data...")
+    transform = []
+    if not parameters.color:
+        transform.append(transforms.Grayscale())
+    transform.append(transforms.ToTensor())
+    transform = transforms.Compose(transform)
+    
     train_loader, test_loader, input_shape, classes = load_vision_dataset(
         dataset=parameters.dataset,
         path=paths.dataset,
         batch_size=parameters.batch_size,
         is_cuda=is_cuda,
-        grayscale=not parameters.color
+        train_transform=transform,
+        test_transform=transform,
     )
 
     print(f"Creating Models...")

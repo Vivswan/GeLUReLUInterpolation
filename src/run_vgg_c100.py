@@ -1,5 +1,6 @@
 import argparse
 import dataclasses
+from functools import partial
 import hashlib
 import json
 import math
@@ -23,12 +24,12 @@ from analogvnn.utils.is_cpu_cuda import is_cpu_cuda
 from torch import nn
 from torch import optim
 from torchvision.datasets import VisionDataset
+from torchvision.transforms import transforms
 
 from src.dataloaders.load_vision_dataset import load_vision_dataset
 from src.fn.cross_entropy_loss_accuracy import cross_entropy_loss_accuracy
 from src.fn.data_dirs import data_dirs
 from src.nn.ReLUGeLUInterpolation import ReLUGeLUInterpolation
-from src.nn.ReLUSiLUInterpolation import ReLUSiLUInterpolation
 from src.nn.WeightModel import WeightModel
 
 cfgs: Dict[str, List[Union[str, int]]] = {
@@ -47,15 +48,15 @@ class VGGRunParameters:
     model_name: Optional[str] = None
     model_version: Optional[str] = "A"
 
-    activation_fn: Type[Union[ReLUGeLUInterpolation, ReLUSiLUInterpolation]] = ReLUGeLUInterpolation
+    activation_fn = ReLUGeLUInterpolation
     activation_i: float = 0.0
     activation_s: float = 1.0
     activation_alpha: float = 0.0
-    norm_class: Optional[Type[Clamp]] = Clamp
-    precision_class: Optional[Type[ReducePrecision]] = ReducePrecision
-    noise_class: Type[GaussianNoise] = GaussianNoise
-    precision: Optional[int] = None
-    leakage: Optional[float] = None
+    norm_class = Clamp
+    precision_class = ReducePrecision
+    noise_class = GaussianNoise
+    precision: float = 64.0
+    leakage: float = None
 
     dataset: Type[VisionDataset] = torchvision.datasets.CIFAR100
     input_shape: Tuple[int, int] = (32, 32)
@@ -64,9 +65,8 @@ class VGGRunParameters:
 
     loss_function = nn.CrossEntropyLoss
     accuracy_function: str = None
-    optimizer: Type[optim.Adam] = optim.Adam
-    lr: float = 1e-3
-    batch_size: int = 512
+    optimizer: Type[optim.Optimizer] = partial(optim.Adam, lr=0.001, weight_decay=0.0001)
+    batch_size: int =  500
     epochs: int = 200
     last_epoch: Optional[int] = 0
 
@@ -77,22 +77,16 @@ class VGGRunParameters:
     save_data: bool = True
     timestamp: str = None
 
-    def create_norm_layer(self) -> Optional[Clamp]:
-        if self.norm_class is None:
-            return None
+    def create_norm_layer(self) -> Clamp:
         return self.norm_class()
 
-    def create_precision_layer(self) -> Optional[ReducePrecision]:
-        if self.precision_class is None:
-            return None
+    def create_precision_layer(self) -> ReducePrecision:
         return self.precision_class(precision=self.precision)
 
-    def create_noise_layer(self) -> Optional[GaussianNoise]:
-        if self.noise_class is None:
-            return None
+    def create_noise_layer(self) -> GaussianNoise:
         return self.noise_class(leakage=self.leakage, precision=self.precision)
 
-    def get_activation_fn(self) -> Layer:
+    def get_activation_fn(self) -> ReLUGeLUInterpolation:
         return self.activation_fn(
             interpolate_factor=self.activation_i,
             scaling_factor=self.activation_s,
@@ -138,10 +132,9 @@ class VGGModel(FullSequential):
                 self.all_layers += [nn.MaxPool2d(kernel_size=2, stride=2)]
             else:
                 v = cast(int, v)
-                conv2d = nn.Conv2d(in_channels, v, kernel_size=3, padding=1)
                 self.all_layers += [
                     *self.hyperparameters.create_doa_layer(),
-                    conv2d,
+                    nn.Conv2d(in_channels, v, kernel_size=3, padding=1),
                     *self.hyperparameters.create_aod_layer(),
                     self.hyperparameters.get_activation_fn(),
                 ]
@@ -174,11 +167,11 @@ class VGGModel(FullSequential):
                 nn.init.kaiming_normal_(m.weight, mode="fan_out", nonlinearity="relu")
                 if m.bias is not None:
                     nn.init.constant_(m.bias, 0)
-            elif isinstance(m, nn.BatchNorm2d):
+            if isinstance(m, nn.BatchNorm2d):
                 nn.init.constant_(m.weight, 1)
                 nn.init.constant_(m.bias, 0)
-            elif isinstance(m, nn.Linear):
-                nn.init.normal_(m.weight, 0, 0.01)
+            if isinstance(m, nn.Linear):
+                nn.init.kaiming_normal_(m.weight)
                 nn.init.constant_(m.bias, 0)
 
         self.add_sequence(*self.all_layers)
@@ -217,12 +210,30 @@ def run_model(parameters: VGGRunParameters):
     print()
 
     print(f"Loading Data...")
+    normalize = transforms.Normalize(
+        mean=[0.4914, 0.4822, 0.4465],
+        std=[0.2023, 0.1994, 0.2010],
+    )
+    train_transform = transforms.Compose([
+            transforms.RandomCrop(32, padding=4, padding_mode='reflect'),
+            transforms.RandomHorizontalFlip(),
+            # transforms.RandomVerticalFlip(),
+            transforms.RandomRotation(15),
+            transforms.ToTensor(),
+            normalize
+    ])
+    test_transform = transforms.Compose([
+        transforms.ToTensor(),
+        normalize
+    ])
+
     train_loader, test_loader, input_shape, classes = load_vision_dataset(
         dataset=parameters.dataset,
         path=paths.dataset,
         batch_size=parameters.batch_size,
         is_cuda=is_cuda,
-        grayscale=not parameters.color
+        train_transform=train_transform,
+        test_transform=test_transform,
     )
 
     print(f"Creating Models...")
@@ -245,7 +256,7 @@ def run_model(parameters: VGGRunParameters):
     nn_model.loss_function = parameters.loss_function()
     nn_model.accuracy_function = cross_entropy_loss_accuracy
     parameters.accuracy_function = nn_model.accuracy_function.__name__
-    nn_model.optimizer = parameters.optimizer(params=nn_model.parameters(), lr=parameters.lr)
+    nn_model.optimizer = parameters.optimizer(params=nn_model.parameters())
 
     nn_model.compile(device=device, layer_data=True)
     weight_model.compile(device=device)
@@ -302,6 +313,9 @@ def run_model(parameters: VGGRunParameters):
 
         if train_accuracy < (1.25 / 100) and epoch >= 9:
             break
+        
+        if test_accuracy < (max(loss_accuracy["test_accuracy"]) - 5/100):
+            break
 
         if parameters.test_run:
             break
@@ -354,7 +368,7 @@ def run_parser():
     parser.add_argument("--data_folder", type=str, required=True)
 
     parser.add_argument("--activation_i", type=float, default=1.0)
-    parser.add_argument("--precision", type=int, required=True)
+    parser.add_argument("--precision", type=int, default=64.0)
     parser.add_argument("--leakage", type=float, required=True)
 
     parser.add_argument("--test_run", action='store_true')
