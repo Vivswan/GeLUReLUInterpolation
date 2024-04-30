@@ -1,17 +1,107 @@
-from typing import Type, Optional
+
+from functools import partial
+import json
+import dataclasses
+from typing import List, Tuple, Type, Optional, Union
 
 import torch
+import torchvision
+from torchvision.datasets import VisionDataset
+from torch import optim
+
 from analogvnn.nn.module.Layer import Layer
+from analogvnn.nn.noise.GaussianNoise import GaussianNoise
+from analogvnn.nn.normalize.Clamp import Clamp
 from analogvnn.nn.normalize.Normalize import Normalize
+from analogvnn.nn.precision.ReducePrecision import ReducePrecision
 from einops import rearrange, repeat
 from einops.layers.torch import Rearrange
 from torch import nn
 
 from src.nn.ReGLUGeGLUInterpolation import ReGLUGeGLUInterpolation
+from src.nn.ReLUGeLUInterpolation import ReLUGeLUInterpolation
+from src.nn.ReLUSiLUInterpolation import ReLUSiLUInterpolation
 
+
+@dataclasses.dataclass
+class ViTRunParameters:
+    name: Optional[str] = None
+    data_folder: Optional[str] = None
+
+    patch_size: int = 4
+    dim: int = 512
+    depth: int = 6
+    heads: int = 8
+    mlp_dim: int = 512
+    pool: str = 'cls'
+    channels: int = 3
+    dim_head: int = 64
+    dropout: float = 0.5
+    emb_dropout: float = 0.5
+
+    activation_fn: Type[Union[ReLUGeLUInterpolation, ReLUSiLUInterpolation, ReGLUGeGLUInterpolation]] = ReLUGeLUInterpolation
+    activation_i: float = 0.0
+    activation_s: float = 1.0
+    activation_alpha: float = 0.0
+    norm_class = Clamp
+    precision_class = ReducePrecision
+    noise_class = GaussianNoise
+    precision: float = 64.0
+    leakage: float = None
+
+    dataset: Type[VisionDataset] = torchvision.datasets.CIFAR10
+    input_shape: Tuple[int, int] = (32, 32)
+    num_classes: int = 10
+    color: bool = True
+
+    loss_function = nn.CrossEntropyLoss
+    accuracy_function: str = None
+    optimizer: Type[optim.Optimizer] = optim.Adam
+    scheduler = torch.optim.lr_scheduler.CosineAnnealingLR
+    batch_size: int = 512
+    epochs: int = 150
+    last_epoch: Optional[int] = 0
+
+    device: Optional[torch.device] = None
+    is_cuda: bool = False
+    test_run: bool = False
+    tensorboard: bool = False
+    save_data: bool = True
+    timestamp: str = None
+
+    def create_norm_layer(self) -> Clamp:
+        return self.norm_class()
+
+    def create_precision_layer(self) -> ReducePrecision:
+        return self.precision_class(precision=self.precision)
+
+    def create_noise_layer(self) -> GaussianNoise:
+        return self.noise_class(leakage=self.leakage, precision=self.precision)
+
+    def get_activation_fn(self) -> Layer:
+        return self.activation_fn(
+            interpolate_factor=self.activation_i,
+            scaling_factor=self.activation_s,
+            alpha=self.activation_alpha
+        )
+    
+    def create_doa_layer(self) -> List[Layer]:
+        layer_list = [
+            self.create_norm_layer(),
+            self.create_precision_layer(),
+            self.create_noise_layer(),
+        ]
+        layer_list = [x for x in layer_list if x is not None]
+        return nn.Sequential(*layer_list)
+
+    @property
+    def json(self):
+        return json.loads(json.dumps(dataclasses.asdict(self), default=str))
+
+    def __repr__(self):
+        return f"{self.__class__.__name__}({json.dumps(self.json)})"
 
 # helpers
-
 def pair(t):
     return t if isinstance(t, tuple) else (t, t)
 
@@ -121,106 +211,56 @@ class Transformer(nn.Module):
 
 
 class ViT(nn.Module):
-    def __init__(
-            self, *,
-            input_shape,
-            patch_size,
-            num_classes,
-            dim,
-            depth,
-            heads,
-            mlp_dim,
-            pool='cls',
-            channels=3,
-            dim_head=64,
-            dropout=0.,
-            emb_dropout=0.,
-            activation_fn: Type[Layer],
-            activation_i: float,
-            activation_s: float,
-            activation_alpha: float,
-            norm_class: Optional[Type[Normalize]],
-            precision_class: Type[Layer],
-            precision: Optional[int],
-            noise_class: Type[Layer],
-            leakage: Optional[float],
-            device: torch.device = "cpu",
-    ):
+    def __init__(self, hyperparameters: ViTRunParameters):
         super().__init__()
-        self.input_shape = input_shape
-        self.patch_size = patch_size
-        self.num_classes = num_classes
-        self.dim = dim
-        self.depth = depth
-        self.heads = heads
-        self.mlp_dim = mlp_dim
-        self.pool = pool
-        self.channels = channels
-        self.dim_head = dim_head
-        self.dropout = dropout
-        self.emb_dropout = emb_dropout
-        self.activation_fn = activation_fn
-        self.activation_i = activation_i
-        self.activation_s = activation_s
-        self.activation_alpha = activation_alpha
-        self.norm_class = norm_class
-        self.precision_class = precision_class
-        self.precision = precision
-        self.noise_class = noise_class
-        self.leakage = leakage
-        self.device = device
+        self.hyperparameters = hyperparameters
 
-        image_height, image_width = input_shape, input_shape
-        patch_height, patch_width = pair(patch_size)
+        image_height, image_width = self.hyperparameters.input_shape, self.hyperparameters.input_shape
+        patch_height, patch_width = pair(self.hyperparameters.patch_size)
 
         assert image_height % patch_height == 0 and image_width % patch_width == 0, 'Image dimensions must be divisible by the patch size.'
 
         num_patches = (image_height // patch_height) * (image_width // patch_width)
-        patch_dim = channels * patch_height * patch_width
-        assert pool in {'cls', 'mean'}, 'pool type must be either cls (cls token) or mean (mean pooling)'
+        patch_dim = self.hyperparameters.channels * patch_height * patch_width
+        assert self.hyperparameters.pool in {'cls', 'mean'}, 'pool type must be either cls (cls token) or mean (mean pooling)'
 
         self.to_patch_embedding = nn.Sequential(
             Rearrange('b c (h p1) (w p2) -> b (h w) (p1 p2 c)', p1=patch_height, p2=patch_width),
-            nn.Linear(patch_dim, dim),
+            nn.Linear(patch_dim, self.hyperparameters.dim),
         )
 
-        self.norm_class_layer = norm_class() if norm_class is not None else None
-        self.precision_class_layer = precision_class(precision=precision) if precision_class is not None else None
-        self.noise_class_layer = noise_class(leakage=leakage, precision=precision) if noise_class is not None else None
+        self.doa_layers = self.hyperparameters.create_doa_layer()
 
-        self.pos_embedding = nn.Parameter(torch.randn(1, num_patches + 1, dim))
-        self.cls_token = nn.Parameter(torch.randn(1, 1, dim))
-        self.emb_dropout_layer = nn.Dropout(emb_dropout)
+        self.pos_embedding = nn.Parameter(torch.randn(1, num_patches + 1, self.hyperparameters.dim))
+        self.cls_token = nn.Parameter(torch.randn(1, 1, self.hyperparameters.dim))
+        self.emb_dropout_layer = nn.Dropout(self.hyperparameters.emb_dropout)
 
         self.transformer = Transformer(
-            dim=dim,
-            depth=depth,
-            heads=heads,
-            dim_head=dim_head,
-            mlp_dim=mlp_dim,
-            dropout=dropout,
-            activation_fn=activation_fn,
-            activation_i=activation_i,
-            activation_s=activation_s,
-            activation_alpha=activation_alpha
+            dim=self.hyperparameters.dim,
+            depth=self.hyperparameters.depth,
+            heads=self.hyperparameters.heads,
+            dim_head=self.hyperparameters.dim_head,
+            mlp_dim=self.hyperparameters.mlp_dim,
+            dropout=self.hyperparameters.dropout,
+            activation_fn=self.hyperparameters.activation_fn,
+            activation_i=self.hyperparameters.activation_i,
+            activation_s=self.hyperparameters.activation_s,
+            activation_alpha=self.hyperparameters.activation_alpha
         )
 
-        self.pool = pool
         self.to_latent = nn.Identity()
 
         self.mlp_head = nn.Sequential(
-            nn.LayerNorm(dim),
-            nn.Linear(dim, num_classes)
+            nn.LayerNorm(self.hyperparameters.dim),
+            nn.Linear(self.hyperparameters.dim, self.hyperparameters.num_classes)
         )
 
     def forward(self, img):
         x = img
-        if self.norm_class_layer is not None:
-            x = self.norm_class_layer(x)
-        if self.precision_class_layer is not None:
-            x = self.precision_class_layer(x)
-        if self.noise_class_layer is not None:
-            x = self.noise_class_layer(x)
+        
+        for layer in self.doa_layers:
+            x = layer(x)
+        
         x = self.to_patch_embedding(x)
         b, n, _ = x.shape
 
@@ -231,36 +271,10 @@ class ViT(nn.Module):
 
         x = self.transformer(x)
 
-        x = x.mean(dim=1) if self.pool == 'mean' else x[:, 0]
+        x = x.mean(dim=1) if self.hyperparameters.pool == 'mean' else x[:, 0]
 
         x = self.to_latent(x)
         return self.mlp_head(x)
 
     def parameters(self, recurse: bool = True):
         return filter(lambda p: p.__class__ == nn.Parameter, super().parameters(recurse))
-
-    def hyperparameters(self):
-        return {
-            "input_shape": self.input_shape,
-            "patch_size": self.patch_size,
-            "num_classes": self.num_classes,
-            "dim": self.dim,
-            "depth": self.depth,
-            "heads": self.heads,
-            "mlp_dim": self.mlp_dim,
-            "pool": self.pool,
-            "channels": self.channels,
-            "dim_head": self.dim_head,
-            "dropout": self.dropout,
-            "emb_dropout": self.emb_dropout,
-            'activation_fn': self.activation_fn.__name__,
-            'activation_i': self.activation_i,
-            'activation_s': self.activation_s,
-            'activation_alpha': self.activation_alpha,
-            'norm_class_y': self.norm_class.__name__ if self.norm_class is not None else str(None),
-            'precision_class_y': self.precision_class.__name__ if self.precision_class is not None else str(None),
-            'precision_y': self.precision,
-            'noise_class_y': self.noise_class.__name__ if self.noise_class is not None else str(None),
-            'leakage_y': self.leakage,
-            'device': str(self.device),
-        }

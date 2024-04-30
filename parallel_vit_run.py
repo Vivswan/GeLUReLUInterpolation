@@ -24,14 +24,19 @@ combination_dict = OrderedDict({
     "activation_i": [0, 0.1, 0.2, 0.3, 0.4, 0.5, 0.6, 0.7, 0.8, 0.9, 1],
     "precision": [4, 8, 16, 32, 64],
     "leakage": [0.2, 0.3, 0.4, 0.5, 0.6, 0.7, 0.8],
+
+    "dataset": ["cifar10", "cifar100"],
 })
 
 RUN_LIST = {
-    "gelu_4n": "depth:4,activation_fn:gelu",
-    "silu_4n": "depth:4,activation_fn:silu",
-    "gege_4n": "depth:4,activation_fn:gege",
-    # "gelu_d": "leakage:0.8,norm_class:Clamp,precision_class:ReducePrecision,noise_class:GaussianNoise,activation_fn:gelu",
-    # "silu_d": "leakage:0.8,norm_class:Clamp,precision_class:ReducePrecision,noise_class:GaussianNoise,activation_fn:silu",
+    # "gelu_d": "leakage:0.8,norm_class:Clamp,precision_class:ReducePrecision,noise_class:GaussianNoise,activation_fn:gelu,dataset:cifar10",
+    # "silu_d": "leakage:0.8,norm_class:Clamp,precision_class:ReducePrecision,noise_class:GaussianNoise,activation_fn:silu,dataset:cifar10",
+    
+    # "gelu_4n": "depth:4,activation_fn:gelu,dataset:cifar10",
+    # "silu_4n": "depth:4,activation_fn:silu,dataset:cifar10",
+    # "gege_4n": "depth:4,activation_fn:gege,dataset:cifar10",
+    
+    "c100_gelu_4n": "depth:4,activation_fn:gelu,dataset:cifar100,precision:64,color:True",
 }
 
 

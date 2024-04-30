@@ -13,7 +13,7 @@ class DataPaths:
     timestamp: str
 
 
-def data_dirs(path, name=None, timestamp=None):
+def data_dirs(path, name=None, timestamp=None) -> DataPaths:
     if timestamp is None:
         timestamp = str(int(time.time()))
 

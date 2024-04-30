@@ -13,7 +13,7 @@ class ReGLUGeGLUInterpolation(Activation):
         https://arxiv.org/abs/2002.05202
     """
 
-    def __init__(self, interpolate_factor: float, alpha: float = 0):
+    def __init__(self, interpolate_factor: float, alpha: float = 0, *args, **kwargs):
         super(ReGLUGeGLUInterpolation, self).__init__()
         self.alpha = nn.Parameter(torch.tensor(alpha), requires_grad=False)
         self.interpolate_factor = nn.Parameter(torch.tensor(interpolate_factor), requires_grad=False)

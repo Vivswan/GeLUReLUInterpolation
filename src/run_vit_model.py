@@ -1,110 +1,26 @@
 import argparse
-import dataclasses
 import hashlib
 import json
 import math
-from dataclasses import dataclass
 from pathlib import Path
-from typing import Type, Optional, Union
 
 import numpy as np
 import torch.backends.cudnn
 import torchvision
-from analogvnn.nn.module.Layer import Layer
-from analogvnn.nn.noise.GaussianNoise import GaussianNoise
-from analogvnn.nn.normalize.Clamp import Clamp
-from analogvnn.nn.normalize.Normalize import Normalize
-from analogvnn.nn.precision.ReducePrecision import ReducePrecision
 from analogvnn.utils.is_cpu_cuda import is_cpu_cuda
 from torch import optim, nn
 from torch.optim import Optimizer
 from torch.utils.data import DataLoader
-from torchvision.datasets import VisionDataset
 from torchvision.transforms import transforms
 
 from src.dataloaders.load_vision_dataset import load_vision_dataset
 from src.fn.cross_entropy_loss_accuracy import cross_entropy_loss_accuracy
 from src.fn.data_dirs import data_dirs
-from src.fn.misc import select_class, check
 from src.nn.ReGLUGeGLUInterpolation import ReGLUGeGLUInterpolation
 from src.nn.ReLUGeLUInterpolation import ReLUGeLUInterpolation
 from src.nn.ReLUSiLUInterpolation import ReLUSiLUInterpolation
-from src.nn.ViT import ViT
+from src.nn.ViT import ViT, ViTRunParameters
 from src.nn.WeightModel import WeightModel
-
-
-@dataclass
-class ViTRunParameters:
-    name: Optional[str] = None
-    data_folder: Optional[str] = None
-
-    patch_size: int = 4
-    dim: int = 512
-    depth: int = 6
-    heads: int = 8
-    mlp_dim: int = 512
-    dropout: float = 0.5
-    emb_dropout: float = 0.5
-
-    activation_fn: Type[Union[ReLUGeLUInterpolation, ReLUSiLUInterpolation]] = ReLUGeLUInterpolation
-    activation_i: float = 0.0
-    activation_s: float = 1.0
-    activation_alpha: float = 0.0
-    norm_class: Optional[Type[Clamp]] = Clamp
-    precision_class: Optional[Type[ReducePrecision]] = ReducePrecision
-    noise_class: Type[GaussianNoise] = GaussianNoise
-    precision: Optional[int] = None
-    leakage: Optional[float] = None
-
-    dataset: Type[VisionDataset] = None
-    color: bool = True
-    batch_size: int = 512
-    epochs: int = 150
-
-    device: Optional[torch.device] = None
-    test_run: bool = False
-    tensorboard: bool = False
-    save_data: bool = True
-    timestamp: str = None
-
-    @property
-    def nn_model_params(self):
-        return {
-            "patch_size": self.patch_size,
-            "dim": self.dim,
-            "depth": self.depth,
-            "heads": self.heads,
-            "mlp_dim": self.mlp_dim,
-            "dropout": self.dropout,
-            "emb_dropout": self.emb_dropout,
-
-            "activation_fn": self.activation_fn,
-            "activation_i": self.activation_i,
-            "activation_s": self.activation_s,
-            "activation_alpha": self.activation_alpha,
-            "norm_class": self.norm_class,
-            "precision_class": self.precision_class,
-            "precision": self.precision,
-            "noise_class": self.noise_class,
-            "leakage": self.leakage,
-        }
-
-    @property
-    def weight_model_params(self):
-        return {
-            "norm_class": self.norm_class,
-            "precision_class": self.precision_class,
-            "precision": self.precision,
-            "noise_class": self.noise_class,
-            "leakage": self.leakage,
-        }
-
-    @property
-    def json(self):
-        return json.loads(json.dumps(dataclasses.asdict(self), default=str))
-
-    def __repr__(self):
-        return f"{self.__class__.__name__}({json.dumps(self.json)})"
 
 
 def train_on(
@@ -198,6 +114,7 @@ def run_model(parameters: ViTRunParameters):
         is_cpu_cuda.set_device(str(parameters.device))
     device, is_cuda = is_cpu_cuda.is_using_cuda
     parameters.device = device
+    parameters.is_cuda = is_cuda
 
     if parameters.data_folder is None:
         raise Exception("data_folder is None")
@@ -214,6 +131,12 @@ def run_model(parameters: ViTRunParameters):
         name=parameters.name,
         timestamp=parameters.timestamp
     )
+
+    if paths.tensorboard.exists():
+        for file in paths.tensorboard.iterdir():
+            file.unlink()
+        paths.tensorboard.rmdir()
+
     parameters.timestamp = paths.timestamp
     log_file = paths.logs.joinpath(f"{paths.name}_logs.txt")
 
@@ -238,50 +161,20 @@ def run_model(parameters: ViTRunParameters):
     )
 
     print(f"Creating Models...")
-    nn_model_params = parameters.nn_model_params
     parameters.input_shape = input_shape[-1]
     parameters.num_classes = len(classes)
-    nn_model = ViT(**nn_model_params)
-    weight_model = WeightModel(
-        norm_class=parameters.norm_class,
-        precision_class=parameters.precision_class,
-        precision=parameters.precision,
-        noise_class=parameters.noise_class,
-        leakage=parameters.leakage,
-    )
-    if parameters.tensorboard:
-        weight_model.create_tensorboard(paths.tensorboard)
+    nn_model = ViT(parameters).to(device)
 
-    weight_model.compile(device=device)
-    nn_model = nn_model.to(device)
-
-    loss_function = nn.CrossEntropyLoss()
+    loss_function = parameters.loss_function()
     accuracy_function = cross_entropy_loss_accuracy
-    optimizer = optim.Adam(params=nn_model.parameters())
-    scheduler = torch.optim.lr_scheduler.CosineAnnealingLR(optimizer, parameters.epochs)
-
-    parameter_log = {
-        'batch_size': parameters.batch_size,
-        'is_cuda': is_cuda,
-        'color': parameters.color,
-        'epochs': parameters.epochs,
-
-        **nn_model.hyperparameters(),
-        **weight_model.hyperparameters(),
-    }
+    parameters.accuracy_function = accuracy_function.__name__
+    optimizer = parameters.optimizer(params=nn_model.parameters())
+    scheduler = parameters.scheduler(optimizer, parameters.epochs)
 
     print(f"Creating Log File...")
     with open(log_file, "a+", encoding="utf-8") as file:
         file.write(json.dumps(parameters.json, sort_keys=True, indent=2) + "\n\n")
-        file.write(json.dumps(parameter_log, sort_keys=True, indent=2) + "\n\n")
         file.write(str(nn_model) + "\n\n")
-        file.write(str(weight_model) + "\n\n")
-
-    if parameters.tensorboard:
-        weight_model.tensorboard.tensorboard.add_text(
-            "parameter",
-            json.dumps(parameters.json, sort_keys=True, indent=2)
-        )
 
     loss_accuracy = {
         "train_loss": [],
@@ -325,42 +218,23 @@ def run_model(parameters: ViTRunParameters):
                     f' Testing Accuracy: {100. * test_accuracy:.0f}%\n'
         print(print_str)
 
-        parameter_log["last_epoch"] = epoch
+        parameters.last_epoch = epoch
         with open(log_file, "a+", encoding="utf-8") as file:
             file.write(print_str)
 
-        if train_accuracy < 0.125 and epoch >= 9 and parameters.dataset == torchvision.datasets.CIFAR10:
+        if epoch >= 9 and train_accuracy < 0.125 and parameters.dataset == torchvision.datasets.CIFAR10:
             break
 
-        if train_accuracy < 0.0125 and epoch >= 9 and parameters.dataset == torchvision.datasets.CIFAR100:
+        if epoch >= 9 and train_accuracy < 0.0125 and parameters.dataset == torchvision.datasets.CIFAR100:
             break
 
         if parameters.test_run:
             break
 
     if parameters.save_data:
-        torch.save(str(nn_model), f"{paths.model_data}/{parameter_log['last_epoch']}_str_nn_model")
-        torch.save(str(weight_model), f"{paths.model_data}/{parameter_log['last_epoch']}_str_weight_model")
-
-        torch.save(parameters.json, f"{paths.model_data}/{parameter_log['last_epoch']}_parameters_json")
-        torch.save(parameter_log, f"{paths.model_data}/{parameter_log['last_epoch']}_parameter_log")
-        torch.save(loss_accuracy, f"{paths.model_data}/{parameter_log['last_epoch']}_loss_accuracy")
-
-    if parameters.tensorboard:
-        metric_dict = {
-            "train_loss": loss_accuracy["train_loss"][-1],
-            "train_accuracy": loss_accuracy["train_accuracy"][-1],
-            "test_loss": loss_accuracy["test_loss"][-1],
-            "test_accuracy": loss_accuracy["test_accuracy"][-1],
-            "min_train_loss": np.min(loss_accuracy["train_loss"]),
-            "max_train_accuracy": np.max(loss_accuracy["train_accuracy"]),
-            "min_test_loss": np.min(loss_accuracy["test_loss"]),
-            "max_test_accuracy": np.max(loss_accuracy["test_accuracy"]),
-        }
-        weight_model.tensorboard.tensorboard.add_hparams(
-            hparam_dict=parameter_log,
-            metric_dict=metric_dict
-        )
+        torch.save(str(nn_model), f"{paths.model_data}/{parameters.last_epoch}_str_nn_model")
+        torch.save(parameters.json, f"{paths.model_data}/{parameters.last_epoch}_parameters_json")
+        torch.save(loss_accuracy, f"{paths.model_data}/{parameters.last_epoch}_loss_accuracy")
 
     with open(log_file, "a+", encoding="utf-8") as file:
         file.write("Run Completed Successfully...")
@@ -414,8 +288,6 @@ def run_parser():
 
     parser.add_argument("--test_run", action='store_true')
     parser.set_defaults(test_run=False)
-    parser.add_argument("--tensorboard", action='store_true')
-    parser.set_defaults(tensorboard=False)
     parser.add_argument("--save_data", action='store_true')
     parser.set_defaults(save_data=False)
     kwargs = vars(parser.parse_known_args()[0])
