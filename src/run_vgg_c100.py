@@ -102,15 +102,6 @@ class VGGRunParameters:
         layer_list = [x for x in layer_list if x is not None]
         return layer_list
 
-    def create_aod_layer(self) -> List[Layer]:
-        layer_list = [
-            self.create_noise_layer(),
-            self.create_norm_layer(),
-            self.create_precision_layer(),
-        ]
-        layer_list = [x for x in layer_list if x is not None]
-        return layer_list
-
     @property
     def json(self):
         return json.loads(json.dumps(dataclasses.asdict(self), default=str))
@@ -135,7 +126,6 @@ class VGGModel(FullSequential):
                 self.all_layers += [
                     *self.hyperparameters.create_doa_layer(),
                     nn.Conv2d(in_channels, v, kernel_size=3, padding=1),
-                    *self.hyperparameters.create_aod_layer(),
                     self.hyperparameters.get_activation_fn(),
                 ]
                 in_channels = v
@@ -146,19 +136,16 @@ class VGGModel(FullSequential):
 
             *self.hyperparameters.create_doa_layer(),
             nn.Linear(512 * 7 * 7, 4096),
-            *self.hyperparameters.create_aod_layer(),
             self.hyperparameters.get_activation_fn(),
             nn.Dropout(p=0.5),
 
             *self.hyperparameters.create_doa_layer(),
             nn.Linear(4096, 4096),
-            *self.hyperparameters.create_aod_layer(),
             self.hyperparameters.get_activation_fn(),
             nn.Dropout(p=0.5),
 
             *self.hyperparameters.create_doa_layer(),
             nn.Linear(4096, self.hyperparameters.num_classes),
-            *self.hyperparameters.create_aod_layer(),
         ]
         self.all_layers = [x for x in self.all_layers if x is not None]
 
@@ -260,7 +247,7 @@ def run_model(parameters: VGGRunParameters):
     parameters.accuracy_function = nn_model.accuracy_function.__name__
     nn_model.optimizer = parameters.optimizer(params=nn_model.parameters())
 
-    nn_model.compile(device=device, layer_data=True)
+    nn_model.compile(device=device)
     weight_model.compile(device=device)
 
     print(f"Creating Log File...")

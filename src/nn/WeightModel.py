@@ -12,7 +12,7 @@ class WeightModel(FullSequential):
             self,
             norm_class: Type[Normalize] = None,
             precision_class: Type[Union[ReducePrecision, StochasticReducePrecision]] = None,
-            precision: Union[int, None] = None,
+            precision: Union[int, float, None] = None,
             noise_class: Type[Union[GaussianNoise]] = None,
             leakage: Union[float, None] = None,
     ):
