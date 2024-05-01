@@ -1,5 +1,5 @@
 import inspect
-from typing import Tuple, Type
+from typing import Tuple, Type, List
 
 from torch.utils.data import DataLoader
 from torchvision.datasets import VisionDataset
@@ -12,7 +12,7 @@ def load_vision_dataset(
         is_cuda=False,
         train_transform=None,
         test_transform=None,
-) -> Tuple[DataLoader, DataLoader, list[int], tuple[str]]:
+) -> Tuple[DataLoader, DataLoader, List[int], Tuple[str]]:
     dataset_kwargs = {
         'batch_size': batch_size,
         'shuffle': True
