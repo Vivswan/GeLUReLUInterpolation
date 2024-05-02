@@ -59,8 +59,8 @@ class ResNetRunParameters:
     loss_function = nn.CrossEntropyLoss
     accuracy_function: str = None
     optimizer: Type[optim.Optimizer] = partial(optim.Adam, lr=0.001)
-    batch_size: int = 512
-    epochs: int = 200
+    batch_size: int = 256 + 128
+    epochs: int = 20
     last_epoch: Optional[int] = 0
 
     device: Optional[torch.device] = None
@@ -158,9 +158,11 @@ class BasicBlock(nn.Module):
             raise NotImplementedError("Dilation > 1 not supported in BasicBlock")
 
         self.block = nn.Sequential(
+            *self.hyperparameters.create_doa_layer(),
             conv3x3(inplanes, planes, stride),
             self.hyperparameters.norm_layer(planes),
             self.hyperparameters.get_activation_fn(),
+            *self.hyperparameters.create_doa_layer(),
             conv3x3(planes, planes),
             self.hyperparameters.norm_layer(planes),
         )
@@ -188,12 +190,15 @@ class Bottleneck(nn.Module):
         width = int(planes * (self.hyperparameters.width_per_group / 64.0)) * self.hyperparameters.groups
 
         self.block = nn.Sequential(
+            *self.hyperparameters.create_doa_layer(),
             conv1x1(inplanes, width),
             self.hyperparameters.norm_layer(width),
             self.hyperparameters.get_activation_fn(),
+            *self.hyperparameters.create_doa_layer(),
             conv3x3(width, width, stride, self.hyperparameters.groups, self.hyperparameters.dilation),
             self.hyperparameters.norm_layer(width),
             self.hyperparameters.get_activation_fn(),
+            *self.hyperparameters.create_doa_layer(),
             conv1x1(width, planes * self.expansion),
             self.hyperparameters.norm_layer(planes * self.expansion),
         )
@@ -224,6 +229,7 @@ class ResNet(nn.Module):
         self.layer4 = self._make_layer(block, 512, layers[3], stride=2)
 
         self.block = nn.Sequential(
+            *self.hyperparameters.create_doa_layer(),
             nn.Conv2d(in_channels=3, out_channels=64, kernel_size=7, stride=2, padding=3, bias=False),
             self.hyperparameters.norm_layer(num_features=64),
             self.hyperparameters.get_activation_fn(),
@@ -234,6 +240,7 @@ class ResNet(nn.Module):
             self.layer4,
             nn.AdaptiveAvgPool2d((1, 1)),
             nn.Flatten(start_dim=1),
+            *self.hyperparameters.create_doa_layer(),
             nn.Linear(512 * block.expansion, self.hyperparameters.num_classes),
         )
 
@@ -254,6 +261,7 @@ class ResNet(nn.Module):
         downsample = None
         if stride != 1 or self.inplanes != planes * block.expansion:
             downsample = nn.Sequential(
+                *self.hyperparameters.create_doa_layer(),
                 conv1x1(self.inplanes, planes * block.expansion, stride),
                 self.hyperparameters.norm_layer(planes * block.expansion),
             )

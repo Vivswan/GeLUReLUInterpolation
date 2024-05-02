@@ -14,7 +14,7 @@ from pathlib import Path
 import torchvision
 from natsort import natsorted, ns
 
-from src.run_vgg_c100 import this_path
+from src.run_resnet_imagenet import this_path
 
 combination_dict = OrderedDict({
     "activation_i": [0, 0.1, 0.2, 0.3, 0.4, 0.5, 0.6, 0.7, 0.8, 0.9, 1],
@@ -22,7 +22,6 @@ combination_dict = OrderedDict({
 })
 
 RUN_LIST = {
-    "c10_li": "",
     "c100_li": "",
 }
 

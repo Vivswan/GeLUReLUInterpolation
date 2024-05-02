@@ -1,4 +1,5 @@
 import inspect
+import os
 from typing import Tuple, Type, List
 
 from torch.utils.data import DataLoader
@@ -20,7 +21,7 @@ def load_vision_dataset(
 
     if is_cuda:
         cuda_kwargs = {
-            'num_workers': 1,
+            'num_workers': len(os.sched_getaffinity(0)) - 1,
             'pin_memory': True,
         }
         dataset_kwargs.update(cuda_kwargs)
