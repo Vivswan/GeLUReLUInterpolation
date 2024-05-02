@@ -296,7 +296,10 @@ def run_model(parameters: VGGRunParameters):
         with open(log_file, "a+", encoding="utf-8") as file:
             file.write(print_str)
 
-        if train_accuracy < (1.25 / 100) and epoch >= 9:
+        if epoch >= 9 and train_accuracy < 0.125 and parameters.dataset == torchvision.datasets.CIFAR10:
+            break
+
+        if epoch >= 9 and train_accuracy < 0.0125 and parameters.dataset == torchvision.datasets.CIFAR100:
             break
 
         if test_accuracy < (max(loss_accuracy["test_accuracy"]) - 5 / 100):
