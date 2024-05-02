@@ -12,6 +12,7 @@ from torch import nn
 from torch.optim import Optimizer
 from torch.utils.data import DataLoader
 from torchvision.transforms import transforms
+from analogvnn.parameter.PseudoParameter import PseudoParameter
 
 from src.dataloaders.load_vision_dataset import load_vision_dataset
 from src.fn.cross_entropy_loss_accuracy import cross_entropy_loss_accuracy
@@ -117,7 +118,7 @@ def run_model(parameters: ResNetRunParameters):
         raise Exception("data_folder is None")
 
     if parameters.name is None:
-        parameters.name = hashlib.sha256(str(parameters).encode("utf-8")).hexdigest()
+        parameters.name = hashlib.sha256(str(parameters).encode("utf-8")).hexdigest()[:8]
 
     print(f"Parameters: {parameters}")
     print(f"Name: {parameters.name}")
@@ -179,7 +180,7 @@ def run_model(parameters: ResNetRunParameters):
         leakage=parameters.leakage,
     )
 
-    # PseudoParameter.parametrize_module(nn_model, transformation=weight_model)
+    PseudoParameter.parametrize_module(nn_model, transformation=weight_model)
 
     loss_function = parameters.loss_function()
     accuracy_function = cross_entropy_loss_accuracy

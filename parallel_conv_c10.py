@@ -53,7 +53,7 @@ RUN_LIST = {
     # "pls": "num_conv_layer:6,num_linear_layer:3,activation_i:1,norm_class:Clamp,precision_class:ReducePrecision,noise_class:GaussianNoise,lr:0.001,activation_alpha:0",
     # "cli1": "leakage:0.8,num_linear_layer:1,activation_s:1,norm_class:Clamp,precision_class:ReducePrecision,noise_class:GaussianNoise,lr:0.001,activation_alpha:0",
     # "fli0": "leakage:0.8,num_conv_layer:0,activation_s:1,norm_class:Clamp,precision_class:ReducePrecision,noise_class:GaussianNoise,lr:0.001,activation_alpha:0",
-    # "lpli": "num_conv_layer:6,num_linear_layer:3,activation_s:1,norm_class:Clamp,precision_class:ReducePrecision,noise_class:GaussianNoise,leakage:0.8,activation_fn:gelu,activation_alpha:0",
+    # "lpli": "num_conv_layer:6,num_linear_layer:3,activation_s:1,norm_class:Clamp,precision_class:ReducePrecision,noise_class:GaussianNoise,leakage:0.8,activation_fn:gelu,activation_alpha:0,color:True,precision:64",
     # "lrelu": "num_conv_layer:6,num_linear_layer:3,activation_i:0,activation_s:1,norm_class:Clamp,precision_class:ReducePrecision,noise_class:GaussianNoise,activation_fn:gelu,lr:0.001",
 
     # CIFAR-100

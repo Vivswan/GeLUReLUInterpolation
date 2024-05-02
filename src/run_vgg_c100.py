@@ -178,7 +178,7 @@ def run_model(parameters: VGGRunParameters):
         raise Exception("data_folder is None")
 
     if parameters.name is None:
-        parameters.name = hashlib.sha256(str(parameters).encode("utf-8")).hexdigest()
+        parameters.name = hashlib.sha256(str(parameters).encode("utf-8")).hexdigest()[:8]
 
     print(f"Parameters: {parameters}")
     print(f"Name: {parameters.name}")
