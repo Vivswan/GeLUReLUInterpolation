@@ -218,17 +218,24 @@ class ResNet(nn.Module):
 
         self.inplanes = 64
         layers = cfgs[self.hyperparameters.model_version]
-
-        self.conv1 = nn.Conv2d(3, self.inplanes, kernel_size=7, stride=2, padding=3, bias=False)
-        self.bn1 = self.hyperparameters.norm_layer(self.inplanes)
-        self.relu = nn.ReLU(inplace=True)
-        self.maxpool = nn.MaxPool2d(kernel_size=3, stride=2, padding=1)
         self.layer1 = self._make_layer(block, 64, layers[0], stride=1)
         self.layer2 = self._make_layer(block, 128, layers[1], stride=2)
         self.layer3 = self._make_layer(block, 256, layers[2], stride=2)
         self.layer4 = self._make_layer(block, 512, layers[3], stride=2)
-        self.avgpool = nn.AdaptiveAvgPool2d((1, 1))
-        self.fc = nn.Linear(512 * block.expansion, self.hyperparameters.num_classes)
+
+        self.block = nn.Sequential(
+            nn.Conv2d(in_channels=3, out_channels=64, kernel_size=7, stride=2, padding=3, bias=False),
+            self.hyperparameters.norm_layer(num_features=64),
+            self.hyperparameters.get_activation_fn(),
+            nn.MaxPool2d(kernel_size=3, stride=2, padding=1),
+            self.layer1,
+            self.layer2,
+            self.layer3,
+            self.layer4,
+            nn.AdaptiveAvgPool2d((1, 1)),
+            nn.Flatten(start_dim=1),
+            nn.Linear(512 * block.expansion, self.hyperparameters.num_classes),
+        )
 
         for m in self.modules():
             if isinstance(m, nn.Conv2d):
@@ -268,22 +275,5 @@ class ResNet(nn.Module):
 
         return nn.Sequential(*layers)
 
-    def _forward_impl(self, x: Tensor) -> Tensor:
-        x = self.conv1(x)
-        x = self.bn1(x)
-        x = self.relu(x)
-        x = self.maxpool(x)
-
-        x = self.layer1(x)
-        x = self.layer2(x)
-        x = self.layer3(x)
-        x = self.layer4(x)
-
-        x = self.avgpool(x)
-        x = torch.flatten(x, 1)
-        x = self.fc(x)
-
-        return x
-
     def forward(self, x: Tensor) -> Tensor:
-        return self._forward_impl(x)
+        return self.block(x)

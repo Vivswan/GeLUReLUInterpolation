@@ -9,7 +9,6 @@ from pathlib import Path
 from typing import Optional, Dict, Tuple, cast
 from typing import Type, Union, List
 
-import numpy as np
 import torch
 import torch.backends.cudnn
 import torchinfo

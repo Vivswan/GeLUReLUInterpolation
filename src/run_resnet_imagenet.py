@@ -7,12 +7,12 @@ from pathlib import Path
 import torch
 import torch.backends.cudnn
 import torchinfo
+from analogvnn.parameter.PseudoParameter import PseudoParameter
 from analogvnn.utils.is_cpu_cuda import is_cpu_cuda
 from torch import nn
 from torch.optim import Optimizer
 from torch.utils.data import DataLoader
 from torchvision.transforms import transforms
-from analogvnn.parameter.PseudoParameter import PseudoParameter
 
 from src.dataloaders.load_vision_dataset import load_vision_dataset
 from src.fn.cross_entropy_loss_accuracy import cross_entropy_loss_accuracy
@@ -105,7 +105,7 @@ def test_on(
 
 
 def run_model(parameters: ResNetRunParameters):
-    torch.backends.cudnn.benchmark = True
+    # torch.backends.cudnn.benchmark = True
     is_cpu_cuda.use_cuda_if_available()
 
     if parameters.device is not None:
@@ -180,7 +180,7 @@ def run_model(parameters: ResNetRunParameters):
         leakage=parameters.leakage,
     )
 
-    PseudoParameter.parametrize_module(nn_model, transformation=weight_model)
+    PseudoParameter.parametrize_module(nn_model, transformation=weight_model, types=(nn.Conv2d, nn.Linear))
 
     loss_function = parameters.loss_function()
     accuracy_function = cross_entropy_loss_accuracy
