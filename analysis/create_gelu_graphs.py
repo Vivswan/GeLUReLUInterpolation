@@ -72,7 +72,6 @@ def sanitise_data(data):
 
     py = data["parameters_json"]["precision"]
     data["bit_precision"] = 32.0 if py is None else math.log2(py)
-
     return data
 
 
@@ -246,7 +245,7 @@ def pre_plot(size_factor):
     return fig
 
 
-def post_plot(plot_data, y_lim=(0, 10000)):
+def post_plot(plot_data, y_lim=(0, 40)):
     x_axis_title = to_title_case(plot_data["x_axis"])
     y_axis_title = to_title_case(plot_data["y_axis"])
     filter_text = ""
@@ -258,7 +257,7 @@ def post_plot(plot_data, y_lim=(0, 10000)):
         # plt.title(f"Filters = {filter_text}")
 
     # if y_lim is not None:
-    #     plt.yticks(np.arange(*y_lim, 25))
+    #     plt.yticks(np.arange(*y_lim, 5))
     #     plt.ylim(y_lim)
     plt.xlabel(x_axis_title)
     plt.ylabel((plot_data["y_prefix"] if "y_prefix" in plot_data else "") + y_axis_title)
@@ -505,88 +504,57 @@ def calculate_max_accuracy(data_path, test_in):
 
 def create_convergence_figure(data_path, size_factor):
     data_path = Path(data_path)
-    test_accuracies = {}
-    norm_classes = {}
-    with open(data_path, "r", encoding="utf-8") as f:
-        data = json.load(f)
+    data = torch.load(data_path)
+    max_len = max([len(i["loss_accuracy"]["test_accuracy"]) for i in data.values()])
 
-    for i, (run_name, run_data) in enumerate(data.items()):
-        loss_accuracy = run_data["loss_accuracy"]
-        test_accuracy = loss_accuracy["test_accuracy"]
-        test_accuracies[run_name] = test_accuracy
+    fig = pre_plot(size_factor=size_factor)
+    avg_test_accuracy = np.zeros((len(data), max_len))
+    avg_test_accuracy[:, :] = np.nan
+    max_test_accuracy_run = None
+    min_test_accuracy_run = None
 
-        if run_data["parameter_log"]["norm_class_w"] != run_data["parameter_log"]["norm_class_y"]:
-            continue
+    leakages = list(set(i["parameters_json"]["leakage"] for i in data.values()))
+    color_map = main_color_palette(n_colors=len(leakages))
+    for i, run_name in enumerate(data.keys()):
+        test_accuracy = np.array(data[run_name]["loss_accuracy"]["test_accuracy"]) * 100
+        avg_test_accuracy[i, :len(test_accuracy)] = test_accuracy
+        plt.plot(test_accuracy, color=color_map[leakages.index(data[run_name]["parameters_json"]["leakage"])],
+                 alpha=0.1)
 
-        if run_data["parameter_log"]["norm_class_w"] not in norm_classes:
-            norm_classes[run_data["parameter_log"]["norm_class_w"]] = []
+        if max_test_accuracy_run is None and len(test_accuracy) == max_len:
+            max_test_accuracy_run = test_accuracy[-1], run_name
+            min_test_accuracy_run = test_accuracy[-1], run_name
 
-        norm_classes[run_data["parameter_log"]["norm_class_w"]].append(run_name)
+        if max_test_accuracy_run is not None:
+            if np.average(test_accuracy[-25:]) > max_test_accuracy_run[0] and len(test_accuracy) == max_len:
+                max_test_accuracy_run = np.average(test_accuracy[-25:]), run_name
+            if np.average(test_accuracy[-25:]) < min_test_accuracy_run[0] and len(test_accuracy) == max_len:
+                min_test_accuracy_run = np.average(test_accuracy[-25:]), run_name
 
-        # if i > 10:
-        #     break
-
-    for norm_class, run_names in norm_classes.items():
-        fig = pre_plot(size_factor=size_factor)
-
-        count = 0
-        avg_test_accuracy = [0] * 200
-        max_test_accuracy_run = None
-        min_test_accuracy_run = None
-
-        for run_name in run_names:
-            if len(test_accuracies[run_name]) < 200:
-                continue
-
-            if max_test_accuracy_run is None:
-                max_test_accuracy_run = test_accuracies[run_name][-1], run_name
-                min_test_accuracy_run = test_accuracies[run_name][-1], run_name
-
-            plt.plot(
-                test_accuracies[run_name],
-                color="C0",
-                alpha=0.1,
-            )
-
-            for i, x in enumerate(test_accuracies[run_name]):
-                avg_test_accuracy[i] += x
-
-            if np.average(test_accuracies[run_name]) > max_test_accuracy_run[0]:
-                max_test_accuracy_run = np.average(test_accuracies[run_name]), run_name
-
-            if np.average(test_accuracies[run_name]) < min_test_accuracy_run[0]:
-                min_test_accuracy_run = np.average(test_accuracies[run_name]), run_name
-
-            count += 1
-
-        if count == 0:
-            continue
-
-        print(norm_class)
-
-        avg_test_accuracy = [x / count for x in avg_test_accuracy]
-        plt.plot(
-            avg_test_accuracy,
-            color="C1",
-            label="Average Performance",
-        )
-        plt.plot(
-            test_accuracies[max_test_accuracy_run[1]],
-            color="C2",
-            label="Maximum Performance",
-        )
-        plt.plot(
-            test_accuracies[min_test_accuracy_run[1]],
-            color="C3",
-            label="Minimum Performance",
-        )
-        plt.legend()
-        plt.xlabel("Epoch")
-        plt.ylabel("Test Accuracy")
-        plt.title(f"Convergence of '{norm_class}' models")
-        fig.tight_layout()
-        fig.savefig(data_path.parent / f"{data_path.stem}_convergence_{norm_class}.png", dpi=600)
-        plt.close(fig)
+    avg_test_accuracy = np.nanmean(avg_test_accuracy, axis=0)
+    avg_test_accuracy = avg_test_accuracy[np.logical_not(np.isnan(avg_test_accuracy))]
+    plt.plot(
+        avg_test_accuracy,
+        color="C1",
+        label="Average Performance",
+    )
+    plt.plot(
+        np.array(data[max_test_accuracy_run[1]]["loss_accuracy"]["test_accuracy"]) * 100,
+        color="C2",
+        label="Maximum Performance",
+    )
+    plt.plot(
+        np.array(data[min_test_accuracy_run[1]]["loss_accuracy"]["test_accuracy"]) * 100,
+        color="C3",
+        label="Minimum Performance",
+    )
+    plt.legend(loc="lower right")
+    plt.xlabel("Epoch")
+    plt.ylabel("Test Accuracy")
+    plt.title(f"Convergence of models")
+    fig.tight_layout()
+    fig.savefig(data_path.parent / f"{data_path.stem}_convergence.png", dpi=600)
+    plt.close(fig)
 
 
 if __name__ == '__main__':
@@ -596,27 +564,8 @@ if __name__ == '__main__':
             continue
         compile_data(i)
 
-    create_line_figure(
-        f"{location}/vgg_c100_li.pt",
-        "parameters_json.activation_i",
-        "max_test_accuracy",
-        colorbar="parameters_json.leakage",
-        name="12",
-        size_factor=(6.5 * 1 / 3, 1.61803398874),
-    )
-    create_line_figure(
-        f"{location}/vgg_c100_li.pt",
-        "parameters_json.activation_i",
-        "max_test_accuracy",
-        colorbar="parameters_json.leakage",
-        name="12",
-        size_factor=(6.5 * 1 / 3, 1.61803398874),
-        filters={
-            "parameters_json.leakage": [0.01, 0.02, 0.03, 0.04, 0.05, 0.06, 0.07, 0.08, 0.09]
-        }
-    )
-    # create_line_figure_max(
-    #     f"{location}/vit_c100_gelu_4n.pt",
+    # create_line_figure(
+    #     f"{location}/vgg_c10_li.pt",
     #     "parameters_json.activation_i",
     #     "max_test_accuracy",
     #     colorbar="parameters_json.leakage",
@@ -624,18 +573,121 @@ if __name__ == '__main__':
     #     size_factor=(6.5 * 1 / 3, 1.61803398874),
     # )
     # create_line_figure_max(
-    #     f"{location}/vit_gelu_4n.pt",
-    #     "parameter_log.activation_i",
+    #     f"{location}/vgg_c10_li.pt",
+    #     "parameters_json.activation_i",
     #     "max_test_accuracy",
-    #     colorbar="parameter_log.color",
+    #     colorbar="parameters_json.leakage",
+    #     name="12",
+    #     size_factor=(6.5 * 1 / 3, 1.61803398874),
+    # )
+    # for i in [0.01, 0.02, 0.03, 0.04, 0.05, 0.06, 0.07, 0.08, 0.09, 0.1, 0.2, 0.3, 0.4, 0.5, 0.6, 0.7, 0.8]:
+    #     create_line_figure_max(
+    #         f"{location}/vgg_c10_li.pt",
+    #         "parameters_json.activation_i",
+    #         "max_test_accuracy",
+    #         colorbar="parameters_json.leakage",
+    #         name="12",
+    #         size_factor=(6.5 * 1 / 3, 1.61803398874),
+    #         filters={
+    #             "parameters_json.leakage": [i],
+    #         }
+    #     )
+    # create_line_figure(
+    #     f"{location}/vgg_c10_li.pt",
+    #     "parameters_json.activation_i",
+    #     "max_test_accuracy",
+    #     colorbar="parameters_json.leakage",
+    #     name="12",
+    #     size_factor=(6.5 * 1 / 3, 1.61803398874),
+    #     filters={
+    #         "parameters_json.leakage": [0.01, 0.02, 0.03, 0.04, 0.05, 0.06, 0.07, 0.08, 0.09],
+    #     }
+    # )
+    # create_line_figure_max(
+    #     f"{location}/vgg_c10_li.pt",
+    #     "parameters_json.activation_i",
+    #     "max_test_accuracy",
+    #     colorbar="parameters_json.leakage",
+    #     name="12",
+    #     size_factor=(6.5 * 1 / 3, 1.61803398874),
+    #     filters={
+    #         "parameters_json.leakage": [0.01, 0.02, 0.03, 0.04, 0.05, 0.06, 0.07, 0.08, 0.09],
+    #     }
+    # )
+    # create_line_figure(
+    #     f"{location}/vgg_c10_li.pt",
+    #     "parameters_json.activation_i",
+    #     "max_test_accuracy",
+    #     colorbar="parameters_json.leakage",
+    #     name="12",
+    #     size_factor=(6.5 * 1 / 3, 1.61803398874),
+    #     filters={
+    #         "parameters_json.leakage": [0.1, 0.2, 0.3, 0.4, 0.5, 0.6, 0.7, 0.8],
+    #     }
+    # )
+    # create_line_figure_max(
+    #     f"{location}/vgg_c10_li.pt",
+    #     "parameters_json.activation_i",
+    #     "max_test_accuracy",
+    #     colorbar="parameters_json.leakage",
+    #     name="12",
+    #     size_factor=(6.5 * 1 / 3, 1.61803398874),
+    #     filters={
+    #         "parameters_json.leakage": [0.1, 0.2, 0.3, 0.4, 0.5, 0.6, 0.7, 0.8],
+    #     }
+    # )
+    create_convergence_figure(f"{location}/vit_c100_gelu_4n.pt", size_factor=(6.5 * 2 / 3, 1.61803398874 * 2))
+    create_convergence_figure(f"{location}/vit_c100_gelu_2n.pt", size_factor=(6.5 * 2 / 3, 1.61803398874 * 2))
+    create_line_figure_max(
+        f"{location}/vit_c100_gelu_4n.pt",
+        "parameters_json.activation_i",
+        "max_test_accuracy",
+        colorbar="parameters_json.leakage",
+        name="31",
+        size_factor=(6.5 * 1 / 3, 1.61803398874),
+    )
+    create_line_figure_max(
+        f"{location}/vit_c100_gelu_2n.pt",
+        "parameters_json.activation_i",
+        "max_test_accuracy",
+        colorbar="parameters_json.leakage",
+        name="31",
+        size_factor=(6.5 * 1 / 3, 1.61803398874),
+    )
+    # create_line_figure(
+    #     f"{location}/vgg_c100_li.pt",
+    #     "parameters_json.activation_i",
+    #     "max_test_accuracy",
+    #     colorbar="parameters_json.leakage",
+    #     name="12",
+    #     size_factor=(6.5 * 1 / 3, 1.61803398874),
+    # )
+    # create_line_figure(
+    #     f"{location}/vgg_c100_li.pt",
+    #     "parameters_json.activation_i",
+    #     "max_test_accuracy",
+    #     colorbar="parameters_json.leakage",
+    #     name="12",
+    #     size_factor=(6.5 * 1 / 3, 1.61803398874),
+    #     filters={
+    #         "parameters_json.leakage": [0.01, 0.02, 0.03, 0.04, 0.05, 0.06, 0.07, 0.08, 0.09]
+    #     }
+    # )
+    # for i in Path(location).glob("*.pt"):
+    #     create_convergence_figure(i, size_factor=(6.5 * 2 / 3, 1.61803398874 * 2))
+    # create_line_figure_max(
+    #     f"{location}/vit_gelu_4n.pt",
+    #     "parameters_json.activation_i",
+    #     "max_test_accuracy",
+    #     colorbar="parameters_json.color",
     #     name="31",
     #     size_factor=(6.5 * 1 / 3, 1.61803398874),
     # )
     # create_line_figure_max(
     #     f"{location}/c100_conv_gpli.pt",
-    #     "parameter_log.activation_i",
+    #     "parameters_json.activation_i",
     #     "max_test_accuracy",
-    #     colorbar='bit_precision_w',
+    #     colorbar='bit_precision',
     #     name="12",
     #     size_factor=(6.5 * 1 / 3, 1.61803398874),
     # )
@@ -643,101 +695,101 @@ if __name__ == '__main__':
     #     f"{location}/conv_lrelu.pt",
     #     "parameters_json.activation_alpha",
     #     "max_test_accuracy",
-    #     colorbar="parameter_log.leakage_w",
+    #     colorbar="parameters_json.leakage",
     #     name="11",
     #     size_factor=(6.5 * 1 / 3, 1.61803398874),
     # )
     # create_line_figure_max(
     #     f"{location}/c100_conv_gpli.pt",
-    #     "parameter_log.activation_i",
+    #     "parameters_json.activation_i",
     #     "max_test_accuracy",
-    #     colorbar="parameter_log.leakage_w",
+    #     colorbar="parameters_json.leakage",
     #     name="12",
     #     size_factor=(6.5 * 1 / 3, 1.61803398874),
     # )
 
     # create_line_figure_max(
     #     f"{location}/conv_gelu_pls.pt",
-    #     "parameter_log.activation_s",
+    #     "parameters_json.activation_s",
     #     "max_test_accuracy",
-    #     colorbar="parameter_log.leakage_w",
+    #     colorbar="parameters_json.leakage",
     #     name="11",
     #     size_factor=(6.5 * 1 / 3, 1.61803398874),
     # )
     # create_line_figure_max(
     #     f"{location}/gelu_conv_pli.pt",
-    #     "parameter_log.activation_i",
+    #     "parameters_json.activation_i",
     #     "max_test_accuracy",
-    #     colorbar="parameter_log.leakage_w",
+    #     colorbar="parameters_json.leakage",
     #     name="12",
     #     size_factor=(6.5 * 1 / 3, 1.61803398874),
     # )
     # create_line_figure_max(
     #     f"{location}/silu_conv_pli.pt",
-    #     "parameter_log.activation_i",
+    #     "parameters_json.activation_i",
     #     "max_test_accuracy",
-    #     colorbar="parameter_log.leakage_w",
+    #     colorbar="parameters_json.leakage",
     #     name="13",
     #     size_factor=(6.5 * 1 / 3, 1.61803398874),
     # )
     #
     # create_line_figure_max(
     #     f"{location}/gelu_conv_cli1.pt",
-    #     "parameter_log.activation_i",
+    #     "parameters_json.activation_i",
     #     "max_test_accuracy",
-    #     colorbar="parameter_log.num_conv_layer",
+    #     colorbar="parameters_json.num_conv_layer",
     #     name="21",
     #     size_factor=(6.5 * 1 / 3, 1.61803398874),
     # )
     #
     # create_line_figure_max(
     #     f"{location}/silu_conv_cli1.pt",
-    #     "parameter_log.activation_i",
+    #     "parameters_json.activation_i",
     #     "max_test_accuracy",
-    #     colorbar="parameter_log.num_conv_layer",
+    #     colorbar="parameters_json.num_conv_layer",
     #     name="22",
     #     size_factor=(6.5 * 1 / 3, 1.61803398874),
     # )
     #
     # create_line_figure_max(
     #     f"{location}/gelu_conv_fli0.pt",
-    #     "parameter_log.activation_i",
+    #     "parameters_json.activation_i",
     #     "max_test_accuracy",
-    #     colorbar="parameter_log.num_linear_layer",
+    #     colorbar="parameters_json.num_linear_layer",
     #     name="23",
     #     size_factor=(6.5 * 1 / 3, 1.61803398874),
     # )
     #
     # create_line_figure_max(
     #     f"{location}/silu_conv_fli0.pt",
-    #     "parameter_log.activation_i",
+    #     "parameters_json.activation_i",
     #     "max_test_accuracy",
-    #     colorbar="parameter_log.num_linear_layer",
+    #     colorbar="parameters_json.num_linear_layer",
     #     name="24",
     #     size_factor=(6.5 * 1 / 3, 1.61803398874),
     # )
     #
     # create_line_figure_max(
     #     f"{location}/vit_gelu_4n.pt",
-    #     "parameter_log.activation_i",
+    #     "parameters_json.activation_i",
     #     "max_test_accuracy",
-    #     colorbar="parameter_log.leakage_w",
+    #     colorbar="parameters_json.leakage",
     #     name="31",
     #     size_factor=(6.5 * 1 / 3, 1.61803398874),
     # )
     # create_line_figure_max(
     #     f"{location}/vit_silu_4n.pt",
-    #     "parameter_log.activation_i",
+    #     "parameters_json.activation_i",
     #     "max_test_accuracy",
-    #     colorbar="parameter_log.leakage_w",
+    #     colorbar="parameters_json.leakage",
     #     name="32",
     #     size_factor=(6.5 * 1 / 3, 1.61803398874),
     # )
     # create_line_figure_max(
     #     f"{location}/vit_gege_4n.pt",
-    #     "parameter_log.activation_i",
+    #     "parameters_json.activation_i",
     #     "max_test_accuracy",
-    #     colorbar="parameter_log.leakage_w",
+    #     colorbar="parameters_json.leakage",
     #     name="33",
     #     size_factor=(6.5 * 1 / 3, 1.61803398874),
     # )

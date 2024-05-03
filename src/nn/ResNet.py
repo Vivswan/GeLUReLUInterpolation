@@ -4,12 +4,10 @@ from dataclasses import dataclass
 from functools import partial
 from typing import Callable, Union
 from typing import Optional, Tuple
-from typing import Type, List
+from typing import Type
 
-import torch
 import torch.backends.cudnn
 import torchvision
-from analogvnn.nn.module.Layer import Layer
 from analogvnn.nn.noise.GaussianNoise import GaussianNoise
 from analogvnn.nn.normalize.Clamp import Clamp
 from analogvnn.nn.precision.ReducePrecision import ReducePrecision
@@ -94,23 +92,23 @@ class ResNetRunParameters:
         layer.use_autograd_graph = True
         return layer
 
-    def create_doa_layer(self) -> List[Layer]:
+    def create_doa_layer(self) -> nn.Module:
         layer_list = [
             self.create_norm_layer(),
             self.create_precision_layer(),
             self.create_noise_layer(),
         ]
         layer_list = [x for x in layer_list if x is not None]
-        return layer_list
+        return nn.Sequential(*layer_list) if len(layer_list) != 0 else nn.Identity()
 
-    def create_aod_layer(self) -> List[Layer]:
+    def create_aod_layer(self) -> nn.Module:
         layer_list = [
             self.create_noise_layer(),
             self.create_norm_layer(),
             self.create_precision_layer(),
         ]
         layer_list = [x for x in layer_list if x is not None]
-        return layer_list
+        return nn.Sequential(*layer_list) if len(layer_list) != 0 else nn.Identity()
 
     @property
     def json(self):
@@ -158,11 +156,11 @@ class BasicBlock(nn.Module):
             raise NotImplementedError("Dilation > 1 not supported in BasicBlock")
 
         self.block = nn.Sequential(
-            *self.hyperparameters.create_doa_layer(),
+            self.hyperparameters.create_doa_layer(),
             conv3x3(inplanes, planes, stride),
             self.hyperparameters.norm_layer(planes),
             self.hyperparameters.get_activation_fn(),
-            *self.hyperparameters.create_doa_layer(),
+            self.hyperparameters.create_doa_layer(),
             conv3x3(planes, planes),
             self.hyperparameters.norm_layer(planes),
         )
@@ -190,15 +188,15 @@ class Bottleneck(nn.Module):
         width = int(planes * (self.hyperparameters.width_per_group / 64.0)) * self.hyperparameters.groups
 
         self.block = nn.Sequential(
-            *self.hyperparameters.create_doa_layer(),
+            self.hyperparameters.create_doa_layer(),
             conv1x1(inplanes, width),
             self.hyperparameters.norm_layer(width),
             self.hyperparameters.get_activation_fn(),
-            *self.hyperparameters.create_doa_layer(),
+            self.hyperparameters.create_doa_layer(),
             conv3x3(width, width, stride, self.hyperparameters.groups, self.hyperparameters.dilation),
             self.hyperparameters.norm_layer(width),
             self.hyperparameters.get_activation_fn(),
-            *self.hyperparameters.create_doa_layer(),
+            self.hyperparameters.create_doa_layer(),
             conv1x1(width, planes * self.expansion),
             self.hyperparameters.norm_layer(planes * self.expansion),
         )
@@ -229,7 +227,7 @@ class ResNet(nn.Module):
         self.layer4 = self._make_layer(block, 512, layers[3], stride=2)
 
         self.block = nn.Sequential(
-            *self.hyperparameters.create_doa_layer(),
+            self.hyperparameters.create_doa_layer(),
             nn.Conv2d(in_channels=3, out_channels=64, kernel_size=7, stride=2, padding=3, bias=False),
             self.hyperparameters.norm_layer(num_features=64),
             self.hyperparameters.get_activation_fn(),
@@ -240,7 +238,7 @@ class ResNet(nn.Module):
             self.layer4,
             nn.AdaptiveAvgPool2d((1, 1)),
             nn.Flatten(start_dim=1),
-            *self.hyperparameters.create_doa_layer(),
+            self.hyperparameters.create_doa_layer(),
             nn.Linear(512 * block.expansion, self.hyperparameters.num_classes),
         )
 
@@ -261,7 +259,7 @@ class ResNet(nn.Module):
         downsample = None
         if stride != 1 or self.inplanes != planes * block.expansion:
             downsample = nn.Sequential(
-                *self.hyperparameters.create_doa_layer(),
+                self.hyperparameters.create_doa_layer(),
                 conv1x1(self.inplanes, planes * block.expansion, stride),
                 self.hyperparameters.norm_layer(planes * block.expansion),
             )

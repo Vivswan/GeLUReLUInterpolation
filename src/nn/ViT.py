@@ -1,10 +1,9 @@
 import dataclasses
 import json
-from typing import List, Tuple, Type, Optional
+from typing import Tuple, Type, Optional
 
 import torch
 import torchvision
-from analogvnn.nn.module.Layer import Layer
 from analogvnn.nn.noise.GaussianNoise import GaussianNoise
 from analogvnn.nn.normalize.Clamp import Clamp
 from analogvnn.nn.precision.ReducePrecision import ReducePrecision
@@ -65,29 +64,37 @@ class ViTRunParameters:
     timestamp: str = None
 
     def create_norm_layer(self) -> Clamp:
-        return self.norm_class()
+        layer = self.norm_class()
+        layer.use_autograd_graph = True
+        return layer
 
     def create_precision_layer(self) -> ReducePrecision:
-        return self.precision_class(precision=self.precision)
+        layer = self.precision_class(precision=self.precision)
+        layer.use_autograd_graph = True
+        return layer
 
     def create_noise_layer(self) -> GaussianNoise:
-        return self.noise_class(leakage=self.leakage, precision=self.precision)
+        layer = self.noise_class(leakage=self.leakage, precision=self.precision)
+        layer.use_autograd_graph = True
+        return layer
 
-    def get_activation_fn(self) -> Layer:
-        return self.activation_fn(
+    def get_activation_fn(self) -> ReLUGeLUInterpolation:
+        layer = self.activation_fn(
             interpolate_factor=self.activation_i,
             scaling_factor=self.activation_s,
             alpha=self.activation_alpha
         )
+        layer.use_autograd_graph = True
+        return layer
 
-    def create_doa_layer(self) -> List[Layer]:
+    def create_doa_layer(self) -> nn.Module:
         layer_list = [
             self.create_norm_layer(),
             self.create_precision_layer(),
             self.create_noise_layer(),
         ]
         layer_list = [x for x in layer_list if x is not None]
-        return nn.Sequential(*layer_list)
+        return nn.Sequential(*layer_list) if len(layer_list) != 0 else nn.Identity()
 
     @property
     def json(self):
@@ -114,23 +121,20 @@ class PreNorm(nn.Module):
 
 
 class FeedForward(nn.Module):
-    def __init__(
-            self,
-            dim,
-            mlp_dim,
-            dropout,
-            activation_fn: Type[Layer],
-            activation_i: float = 0.,
-            activation_s: float = 1.,
-            activation_alpha: float = 1.
-    ):
+    def __init__(self, hyperparameters: ViTRunParameters):
         super().__init__()
+        self.hyperparameters = hyperparameters
         self.net = nn.Sequential(
-            nn.Linear(dim, mlp_dim),
-            activation_fn(activation_i, activation_s, activation_alpha),
-            nn.Dropout(dropout),
-            nn.Linear(int(mlp_dim / 2) if activation_fn == ReGLUGeGLUInterpolation else mlp_dim, dim),
-            nn.Dropout(dropout),
+            nn.Linear(self.hyperparameters.dim, self.hyperparameters.mlp_dim),
+            self.hyperparameters.get_activation_fn(),
+            nn.Dropout(self.hyperparameters.dropout),
+            nn.Linear(
+                int(self.hyperparameters.mlp_dim / (
+                    2 if self.hyperparameters.activation_fn == ReGLUGeGLUInterpolation else 1
+                )),
+                self.hyperparameters.dim
+            ),
+            nn.Dropout(self.hyperparameters.dropout),
         )
 
     def forward(self, x):
@@ -168,35 +172,21 @@ class Attention(nn.Module):
 
 
 class Transformer(nn.Module):
-    def __init__(
-            self,
-            dim,
-            depth,
-            heads,
-            dim_head,
-            mlp_dim,
-            dropout,
-            activation_fn: Type[Layer],
-            activation_i: float = 0.,
-            activation_s: float = 1.,
-            activation_alpha: float = 1.
-    ):
+    def __init__(self, hyperparameters: ViTRunParameters):
         super().__init__()
+        self.hyperparameters = hyperparameters
         self.layers = nn.ModuleList([])
-        for _ in range(depth):
-            attention = Attention(dim, heads=heads, dim_head=dim_head, dropout=dropout)
-            feed_forward = FeedForward(
-                dim=dim,
-                mlp_dim=mlp_dim,
-                dropout=dropout,
-                activation_fn=activation_fn,
-                activation_i=activation_i,
-                activation_s=activation_s,
-                activation_alpha=activation_alpha
+        for _ in range(self.hyperparameters.depth):
+            attention = Attention(
+                dim=self.hyperparameters.dim,
+                heads=self.hyperparameters.heads,
+                dim_head=self.hyperparameters.dim_head,
+                dropout=self.hyperparameters.dropout,
             )
+            feed_forward = FeedForward(hyperparameters=self.hyperparameters)
             self.layers.append(nn.ModuleList([
-                PreNorm(dim, attention),
-                PreNorm(dim, feed_forward),
+                PreNorm(self.hyperparameters.dim, attention),
+                PreNorm(self.hyperparameters.dim, feed_forward),
             ]))
 
     def forward(self, x):
@@ -231,21 +221,8 @@ class ViT(nn.Module):
         self.cls_token = nn.Parameter(torch.randn(1, 1, self.hyperparameters.dim))
         self.emb_dropout_layer = nn.Dropout(self.hyperparameters.emb_dropout)
 
-        self.transformer = Transformer(
-            dim=self.hyperparameters.dim,
-            depth=self.hyperparameters.depth,
-            heads=self.hyperparameters.heads,
-            dim_head=self.hyperparameters.dim_head,
-            mlp_dim=self.hyperparameters.mlp_dim,
-            dropout=self.hyperparameters.dropout,
-            activation_fn=self.hyperparameters.activation_fn,
-            activation_i=self.hyperparameters.activation_i,
-            activation_s=self.hyperparameters.activation_s,
-            activation_alpha=self.hyperparameters.activation_alpha
-        )
-
+        self.transformer = Transformer(hyperparameters=self.hyperparameters)
         self.to_latent = nn.Identity()
-
         self.mlp_head = nn.Sequential(
             nn.LayerNorm(self.hyperparameters.dim),
             nn.Linear(self.hyperparameters.dim, self.hyperparameters.num_classes)
@@ -253,9 +230,7 @@ class ViT(nn.Module):
 
     def forward(self, img):
         x = img
-
-        for layer in self.doa_layers:
-            x = layer(x)
+        x = self.doa_layers(x)
 
         x = self.to_patch_embedding(x)
         b, n, _ = x.shape
