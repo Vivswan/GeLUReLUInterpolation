@@ -58,7 +58,7 @@ class ResNetRunParameters:
     accuracy_function: str = None
     optimizer: Type[optim.Optimizer] = partial(optim.Adam, lr=0.001)
     batch_size: int = 256 + 128
-    epochs: int = 20
+    epochs: int = 100
     last_epoch: Optional[int] = 0
 
     device: Optional[torch.device] = None
@@ -164,7 +164,7 @@ class BasicBlock(nn.Module):
             conv3x3(planes, planes),
             self.hyperparameters.norm_layer(planes),
         )
-        self.downsample = downsample if downsample is not None else nn.Identity()
+        self.downsample = downsample if downsample is not None else self.hyperparameters.create_doa_layer()
         self.activation = self.hyperparameters.get_activation_fn()
 
     def forward(self, x: Tensor) -> Tensor:
@@ -200,7 +200,7 @@ class Bottleneck(nn.Module):
             conv1x1(width, planes * self.expansion),
             self.hyperparameters.norm_layer(planes * self.expansion),
         )
-        self.downsample = downsample if downsample is not None else nn.Identity()
+        self.downsample = downsample if downsample is not None else self.hyperparameters.create_doa_layer()
         self.activation = self.hyperparameters.get_activation_fn()
 
     def forward(self, x: Tensor) -> Tensor:

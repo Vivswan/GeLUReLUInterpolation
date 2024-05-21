@@ -23,6 +23,7 @@ combination_dict = OrderedDict({
 
 RUN_LIST = {
     "c100_li": "",
+    "imagenet_li": "",
 }
 
 

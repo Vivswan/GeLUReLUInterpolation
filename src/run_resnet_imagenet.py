@@ -252,9 +252,6 @@ def run_model(parameters: ResNetRunParameters):
         if epoch >= 9 and train_accuracy < 0.0125 and parameters.dataset == torchvision.datasets.CIFAR100:
             break
 
-        if test_accuracy < (max(loss_accuracy["test_accuracy"]) - 5 / 100):
-            break
-
         if parameters.test_run:
             break
 

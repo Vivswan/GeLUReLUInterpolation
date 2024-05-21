@@ -52,7 +52,7 @@ class ViTRunParameters:
     accuracy_function: str = None
     optimizer: Type[optim.Optimizer] = optim.Adam
     scheduler = torch.optim.lr_scheduler.CosineAnnealingLR
-    batch_size: int = 512
+    batch_size: int = 3125
     epochs: int = 150
     last_epoch: Optional[int] = 0
 
