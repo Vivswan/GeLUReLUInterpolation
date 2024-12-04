@@ -291,10 +291,10 @@ def post_plot(plot_data, y_lim=(0, 40)):
 
     name = f"{plot_data['prefix']} - {run_name} - {x_axis_title} vs {y_axis_title}{filter_text}{colorbar_text}{subsection_text}"
 
-    # plot_data["fig"].savefig(f'{location}/{name}.pdf', dpi=plot_data["fig"].dpi, transparent=True)
-    # plot_data["fig"].savefig(f'{location}/{name}.svg', dpi=plot_data["fig"].dpi, transparent=True)
+    plot_data["fig"].savefig(f'{location}/{name}.pdf', dpi=plot_data["fig"].dpi, transparent=True)
+    plot_data["fig"].savefig(f'{location}/{name}.svg', dpi=plot_data["fig"].dpi, transparent=True)
     plot_data["fig"].savefig(f'{location}/{name}.png', dpi=plot_data["fig"].dpi, transparent=True)
-
+    plt.show()
     plt.close('all')
 
 
@@ -486,9 +486,9 @@ def create_heatmaps_figure_max(data_path, x_axis, y_axis, subsection=None, filte
     post_plot(plot_data, y_lim=None)
 
 
-def calculate_max_accuracy(data_path, test_in):
+def calculate_max_accuracy(data_path, test_in, filters=None):
     data_path = Path(data_path)
-    plot_data = get_plot_data(data_path, test_in, "loss_accuracy.test_accuracy")
+    plot_data = get_plot_data(data_path, test_in, "loss_accuracy.test_accuracy", filters=filters)
     max_accuracies = {}
     for i in set(plot_data["x"]):
         max_accuracies[i] = 0.0
@@ -497,7 +497,7 @@ def calculate_max_accuracy(data_path, test_in):
         value = max(value)
         if max_accuracies[plot_data["x"][index]] < value:
             max_accuracies[plot_data["x"][index]] = value
-            max_accuracies[plot_data["x"][index] + "_index"] = index
+            max_accuracies[f"{plot_data['x'][index]}_index"] = index
 
     print(max_accuracies)
 
@@ -553,8 +553,131 @@ def create_convergence_figure(data_path, size_factor):
     plt.ylabel("Test Accuracy")
     plt.title(f"Convergence of models")
     fig.tight_layout()
-    fig.savefig(data_path.parent / f"{data_path.stem}_convergence.png", dpi=600)
+    fig.savefig(data_path.parent / f"{data_path.stem}_convergence.png", dpi=600, transparent=True)
+    plt.show()
     plt.close(fig)
+
+
+def figure2():
+    create_line_figure_max(
+        f"{location}/conv_gelu_pls.pt",
+        "parameter_log.activation_s",
+        "max_test_accuracy",
+        colorbar="parameter_log.leakage_w",
+        name="11",
+        size_factor=(6.5 * 1 / 3, 1.61803398874),
+    )
+
+
+def figure3():
+    create_line_figure_max(
+        f"{location}/conv_gelu_pli.pt",
+        "parameters_json.conv_gelu_pli",
+        "max_test_accuracy",
+        colorbar="parameters_json.leakage",
+        name="12",
+        size_factor=(6.5 * 1 / 3, 1.61803398874),
+    )
+    create_line_figure_max(
+        f"{location}/conv_silu_pli.pt",
+        "parameters_json.activation_i",
+        "max_test_accuracy",
+        colorbar="parameters_json.leakage",
+        name="13",
+        size_factor=(6.5 * 1 / 3, 1.61803398874),
+    )
+
+
+def figure5():
+    create_line_figure_max(
+        f"{location}/conv_gelu_cli1.pt",
+        "parameters_json.activation_i",
+        "max_test_accuracy",
+        colorbar="parameters_json.num_conv_layer",
+        name="21",
+        size_factor=(6.5 * 1 / 3, 1.61803398874),
+    )
+
+    create_line_figure_max(
+        f"{location}/conv_silu_cli1.pt",
+        "parameters_json.activation_i",
+        "max_test_accuracy",
+        colorbar="parameters_json.num_conv_layer",
+        name="22",
+        size_factor=(6.5 * 1 / 3, 1.61803398874),
+    )
+    #
+    create_line_figure_max(
+        f"{location}/conv_gelu_fli0.pt",
+        "parameters_json.activation_i",
+        "max_test_accuracy",
+        colorbar="parameters_json.num_linear_layer",
+        name="23",
+        size_factor=(6.5 * 1 / 3, 1.61803398874),
+    )
+
+    create_line_figure_max(
+        f"{location}/conv_silu_fli0.pt",
+        "parameters_json.activation_i",
+        "max_test_accuracy",
+        colorbar="parameters_json.num_linear_layer",
+        name="24",
+        size_factor=(6.5 * 1 / 3, 1.61803398874),
+    )
+
+
+def figure6():
+    create_line_figure_max(
+        f"{location}/vit_gelu_4n.pt",
+        "parameters_json.activation_i",
+        "max_test_accuracy",
+        colorbar="parameters_json.leakage",
+        name="31",
+        size_factor=(6.5 * 1 / 3, 1.61803398874),
+    )
+    create_line_figure_max(
+        f"{location}/vit_silu_4n.pt",
+        "parameters_json.activation_i",
+        "max_test_accuracy",
+        colorbar="parameters_json.leakage",
+        name="32",
+        size_factor=(6.5 * 1 / 3, 1.61803398874),
+    )
+    create_line_figure_max(
+        f"{location}/vit_gege_4n.pt",
+        "parameters_json.activation_i",
+        "max_test_accuracy",
+        colorbar="parameters_json.leakage",
+        name="33",
+        size_factor=(6.5 * 1 / 3, 1.61803398874),
+    )
+
+
+def figure_appendix():
+    create_line_figure_max(
+        f"{location}/conv_c100_gpli.pt",
+        "parameters_json.activation_i",
+        "max_test_accuracy",
+        colorbar="parameters_json.leakage",
+        name="12",
+        size_factor=(6.5 * 1 / 3, 1.61803398874),
+    )
+    create_line_figure(
+        f"{location}/vgg_c100_li.pt",
+        "parameters_json.activation_i",
+        "max_test_accuracy",
+        colorbar="parameters_json.leakage",
+        name="12",
+        size_factor=(6.5 * 1 / 3, 1.61803398874),
+    )
+    create_line_figure_max(
+        f"{location}/resnet_c100_li.pt",
+        "parameters_json.activation_i",
+        "max_test_accuracy",
+        colorbar="parameters_json.leakage",
+        name="12",
+        size_factor=(6.5 * 1 / 3, 1.61803398874),
+    )
 
 
 if __name__ == '__main__':
@@ -563,233 +686,46 @@ if __name__ == '__main__':
         if not i.is_dir():
             continue
         compile_data(i)
-
-    # create_line_figure(
-    #     f"{location}/vgg_c10_li.pt",
-    #     "parameters_json.activation_i",
-    #     "max_test_accuracy",
-    #     colorbar="parameters_json.leakage",
-    #     name="12",
-    #     size_factor=(6.5 * 1 / 3, 1.61803398874),
-    # )
+    figure_appendix()
+    # create_convergence_figure(f"{location}/vit_c100_gelu_4n.pt", size_factor=(6.5 * 2 / 3, 1.61803398874 * 2))
+    # create_convergence_figure(f"{location}/vit_c100_gelu_2n.pt", size_factor=(6.5 * 2 / 3, 1.61803398874 * 2))
     # create_line_figure_max(
-    #     f"{location}/vgg_c10_li.pt",
+    #     f"{location}/vit_c100_gelu_4n.pt",
     #     "parameters_json.activation_i",
     #     "max_test_accuracy",
     #     colorbar="parameters_json.leakage",
-    #     name="12",
-    #     size_factor=(6.5 * 1 / 3, 1.61803398874),
-    # )
-    # for i in [0.01, 0.02, 0.03, 0.04, 0.05, 0.06, 0.07, 0.08, 0.09, 0.1, 0.2, 0.3, 0.4, 0.5, 0.6, 0.7, 0.8]:
-    #     create_line_figure_max(
-    #         f"{location}/vgg_c10_li.pt",
-    #         "parameters_json.activation_i",
-    #         "max_test_accuracy",
-    #         colorbar="parameters_json.leakage",
-    #         name="12",
-    #         size_factor=(6.5 * 1 / 3, 1.61803398874),
-    #         filters={
-    #             "parameters_json.leakage": [i],
-    #         }
-    #     )
-    # create_line_figure(
-    #     f"{location}/vgg_c10_li.pt",
-    #     "parameters_json.activation_i",
-    #     "max_test_accuracy",
-    #     colorbar="parameters_json.leakage",
-    #     name="12",
-    #     size_factor=(6.5 * 1 / 3, 1.61803398874),
-    #     filters={
-    #         "parameters_json.leakage": [0.01, 0.02, 0.03, 0.04, 0.05, 0.06, 0.07, 0.08, 0.09],
-    #     }
-    # )
-    # create_line_figure_max(
-    #     f"{location}/vgg_c10_li.pt",
-    #     "parameters_json.activation_i",
-    #     "max_test_accuracy",
-    #     colorbar="parameters_json.leakage",
-    #     name="12",
-    #     size_factor=(6.5 * 1 / 3, 1.61803398874),
-    #     filters={
-    #         "parameters_json.leakage": [0.01, 0.02, 0.03, 0.04, 0.05, 0.06, 0.07, 0.08, 0.09],
-    #     }
-    # )
-    # create_line_figure(
-    #     f"{location}/vgg_c10_li.pt",
-    #     "parameters_json.activation_i",
-    #     "max_test_accuracy",
-    #     colorbar="parameters_json.leakage",
-    #     name="12",
-    #     size_factor=(6.5 * 1 / 3, 1.61803398874),
-    #     filters={
-    #         "parameters_json.leakage": [0.1, 0.2, 0.3, 0.4, 0.5, 0.6, 0.7, 0.8],
-    #     }
-    # )
-    # create_line_figure_max(
-    #     f"{location}/vgg_c10_li.pt",
-    #     "parameters_json.activation_i",
-    #     "max_test_accuracy",
-    #     colorbar="parameters_json.leakage",
-    #     name="12",
-    #     size_factor=(6.5 * 1 / 3, 1.61803398874),
-    #     filters={
-    #         "parameters_json.leakage": [0.1, 0.2, 0.3, 0.4, 0.5, 0.6, 0.7, 0.8],
-    #     }
-    # )
-    create_convergence_figure(f"{location}/vit_c100_gelu_4n.pt", size_factor=(6.5 * 2 / 3, 1.61803398874 * 2))
-    create_convergence_figure(f"{location}/vit_c100_gelu_2n.pt", size_factor=(6.5 * 2 / 3, 1.61803398874 * 2))
-    create_line_figure_max(
-        f"{location}/vit_c100_gelu_4n.pt",
-        "parameters_json.activation_i",
-        "max_test_accuracy",
-        colorbar="parameters_json.leakage",
-        name="31",
-        size_factor=(6.5 * 1 / 3, 1.61803398874),
-    )
-    create_line_figure_max(
-        f"{location}/vit_c100_gelu_2n.pt",
-        "parameters_json.activation_i",
-        "max_test_accuracy",
-        colorbar="parameters_json.leakage",
-        name="31",
-        size_factor=(6.5 * 1 / 3, 1.61803398874),
-    )
-    # create_line_figure(
-    #     f"{location}/vgg_c100_li.pt",
-    #     "parameters_json.activation_i",
-    #     "max_test_accuracy",
-    #     colorbar="parameters_json.leakage",
-    #     name="12",
-    #     size_factor=(6.5 * 1 / 3, 1.61803398874),
-    # )
-    # create_line_figure(
-    #     f"{location}/vgg_c100_li.pt",
-    #     "parameters_json.activation_i",
-    #     "max_test_accuracy",
-    #     colorbar="parameters_json.leakage",
-    #     name="12",
-    #     size_factor=(6.5 * 1 / 3, 1.61803398874),
-    #     filters={
-    #         "parameters_json.leakage": [0.01, 0.02, 0.03, 0.04, 0.05, 0.06, 0.07, 0.08, 0.09]
-    #     }
-    # )
-    # for i in Path(location).glob("*.pt"):
-    #     create_convergence_figure(i, size_factor=(6.5 * 2 / 3, 1.61803398874 * 2))
-    # create_line_figure_max(
-    #     f"{location}/vit_gelu_4n.pt",
-    #     "parameters_json.activation_i",
-    #     "max_test_accuracy",
-    #     colorbar="parameters_json.color",
     #     name="31",
     #     size_factor=(6.5 * 1 / 3, 1.61803398874),
     # )
     # create_line_figure_max(
-    #     f"{location}/c100_conv_gpli.pt",
+    #     f"{location}/vit_c100_gelu_2n.pt",
     #     "parameters_json.activation_i",
     #     "max_test_accuracy",
-    #     colorbar='bit_precision',
+    #     colorbar="parameters_json.leakage",
+    #     name="31",
+    #     size_factor=(6.5 * 1 / 3, 1.61803398874),
+    # )
+
+    # create_convergence_figure(f"{location}/resnet_c100_li.pt", size_factor=(6.5 * 2 / 3, 1.61803398874 * 2))
+    # create_line_figure(
+    #     f"{location}/resnet_c100_li.pt",
+    #     "parameters_json.activation_i",
+    #     "max_test_accuracy",
+    #     colorbar="parameters_json.leakage",
     #     name="12",
     #     size_factor=(6.5 * 1 / 3, 1.61803398874),
     # )
-    # create_line_figure_max(
+    # calculate_max_accuracy(
     #     f"{location}/conv_lrelu.pt",
     #     "parameters_json.activation_alpha",
-    #     "max_test_accuracy",
-    #     colorbar="parameters_json.leakage",
-    #     name="11",
-    #     size_factor=(6.5 * 1 / 3, 1.61803398874),
+    #     filters={
+    #         "parameters_json.leakage": 0.7,
+    #     }
     # )
-    # create_line_figure_max(
-    #     f"{location}/c100_conv_gpli.pt",
+    # calculate_max_accuracy(
+    #     f"{location}/conv_gelu_pli.pt",
     #     "parameters_json.activation_i",
-    #     "max_test_accuracy",
-    #     colorbar="parameters_json.leakage",
-    #     name="12",
-    #     size_factor=(6.5 * 1 / 3, 1.61803398874),
-    # )
-
-    # create_line_figure_max(
-    #     f"{location}/conv_gelu_pls.pt",
-    #     "parameters_json.activation_s",
-    #     "max_test_accuracy",
-    #     colorbar="parameters_json.leakage",
-    #     name="11",
-    #     size_factor=(6.5 * 1 / 3, 1.61803398874),
-    # )
-    # create_line_figure_max(
-    #     f"{location}/gelu_conv_pli.pt",
-    #     "parameters_json.activation_i",
-    #     "max_test_accuracy",
-    #     colorbar="parameters_json.leakage",
-    #     name="12",
-    #     size_factor=(6.5 * 1 / 3, 1.61803398874),
-    # )
-    # create_line_figure_max(
-    #     f"{location}/silu_conv_pli.pt",
-    #     "parameters_json.activation_i",
-    #     "max_test_accuracy",
-    #     colorbar="parameters_json.leakage",
-    #     name="13",
-    #     size_factor=(6.5 * 1 / 3, 1.61803398874),
-    # )
-    #
-    # create_line_figure_max(
-    #     f"{location}/gelu_conv_cli1.pt",
-    #     "parameters_json.activation_i",
-    #     "max_test_accuracy",
-    #     colorbar="parameters_json.num_conv_layer",
-    #     name="21",
-    #     size_factor=(6.5 * 1 / 3, 1.61803398874),
-    # )
-    #
-    # create_line_figure_max(
-    #     f"{location}/silu_conv_cli1.pt",
-    #     "parameters_json.activation_i",
-    #     "max_test_accuracy",
-    #     colorbar="parameters_json.num_conv_layer",
-    #     name="22",
-    #     size_factor=(6.5 * 1 / 3, 1.61803398874),
-    # )
-    #
-    # create_line_figure_max(
-    #     f"{location}/gelu_conv_fli0.pt",
-    #     "parameters_json.activation_i",
-    #     "max_test_accuracy",
-    #     colorbar="parameters_json.num_linear_layer",
-    #     name="23",
-    #     size_factor=(6.5 * 1 / 3, 1.61803398874),
-    # )
-    #
-    # create_line_figure_max(
-    #     f"{location}/silu_conv_fli0.pt",
-    #     "parameters_json.activation_i",
-    #     "max_test_accuracy",
-    #     colorbar="parameters_json.num_linear_layer",
-    #     name="24",
-    #     size_factor=(6.5 * 1 / 3, 1.61803398874),
-    # )
-    #
-    # create_line_figure_max(
-    #     f"{location}/vit_gelu_4n.pt",
-    #     "parameters_json.activation_i",
-    #     "max_test_accuracy",
-    #     colorbar="parameters_json.leakage",
-    #     name="31",
-    #     size_factor=(6.5 * 1 / 3, 1.61803398874),
-    # )
-    # create_line_figure_max(
-    #     f"{location}/vit_silu_4n.pt",
-    #     "parameters_json.activation_i",
-    #     "max_test_accuracy",
-    #     colorbar="parameters_json.leakage",
-    #     name="32",
-    #     size_factor=(6.5 * 1 / 3, 1.61803398874),
-    # )
-    # create_line_figure_max(
-    #     f"{location}/vit_gege_4n.pt",
-    #     "parameters_json.activation_i",
-    #     "max_test_accuracy",
-    #     colorbar="parameters_json.leakage",
-    #     name="33",
-    #     size_factor=(6.5 * 1 / 3, 1.61803398874),
+    #     filters={
+    #         "parameters_json.leakage": 0.7,
+    #     }
     # )

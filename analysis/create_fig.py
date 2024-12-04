@@ -104,9 +104,8 @@ def figure3():
     fig.savefig("../_results/Figure 3.pdf", dpi=600)
 
 
-def figure4():
+def figure4(precision=2 ** 8):
     bound = 1
-    precision = 2 ** 1
     clamp = Clamp()
     rp = ReducePrecision(precision=precision)
     noise = GaussianNoise(leakage=0.5, precision=precision)
@@ -214,9 +213,8 @@ def figure5():
     fig.savefig("../_results/Figure 5.pdf", dpi=600)
 
 
-def figure6():
+def figure6(precision=2 ** 8):
     bound = 1
-    precision = 2 ** 1
     clamp = Clamp()
     rp = ReducePrecision(precision=precision)
     noise = GaussianNoise(leakage=0.5, precision=precision)

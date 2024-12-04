@@ -1,4 +1,4 @@
---extra-index-url https://download.pytorch.org/whl/cu121
+# --extra-index-url https://download.pytorch.org/whl/cu121
 # conda install -y pytorch torchvision torchaudio torchtext pytorch-cuda=12.1 -c pytorch -c nvidia
 # torch
 # torchvision
