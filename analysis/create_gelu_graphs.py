@@ -245,7 +245,7 @@ def pre_plot(size_factor):
     return fig
 
 
-def post_plot(plot_data, y_lim=(0, 40)):
+def post_plot(plot_data, y_lim=None):
     x_axis_title = to_title_case(plot_data["x_axis"])
     y_axis_title = to_title_case(plot_data["y_axis"])
     filter_text = ""
@@ -256,9 +256,9 @@ def post_plot(plot_data, y_lim=(0, 40)):
         filter_text = filter_text.replace("|", " or ")
         # plt.title(f"Filters = {filter_text}")
 
-    # if y_lim is not None:
-    #     plt.yticks(np.arange(*y_lim, 5))
-    #     plt.ylim(y_lim)
+    if y_lim is not None:
+        # plt.yticks(np.arange(*y_lim, 5))
+        plt.ylim(y_lim)
     plt.xlabel(x_axis_title)
     plt.ylabel((plot_data["y_prefix"] if "y_prefix" in plot_data else "") + y_axis_title)
 
@@ -379,7 +379,8 @@ def create_line_figure(data_path, x_axis, y_axis, subsection=None, colorbar=None
 
 
 def create_line_figure_max(data_path, x_axis, y_axis, subsection=None, colorbar=None, filters=None,
-                           size_factor: Tuple[float, float] = 2.0, x_lim=None, name=None, min_vmin=None, max_vmax=None):
+                           size_factor: Tuple[float, float] = 2.0, x_lim=None, y_lim=None, name=None, min_vmin=None,
+                           max_vmax=None):
     plot_data = get_plot_data(data_path, x_axis, y_axis, subsection=subsection, colorbar=colorbar, filters=filters)
     fig = pre_plot(size_factor)
 
@@ -427,7 +428,7 @@ def create_line_figure_max(data_path, x_axis, y_axis, subsection=None, colorbar=
     plot_data["y_prefix"] = "Maximum "
     if name is not None:
         plot_data["prefix"] = name + "_" + plot_data["prefix"]
-    post_plot(plot_data)
+    post_plot(plot_data, y_lim=y_lim)
 
 
 def create_heatmaps_figure_max(data_path, x_axis, y_axis, subsection=None, filters=None,
@@ -634,6 +635,7 @@ def figure6():
         colorbar="parameters_json.leakage",
         name="31",
         size_factor=(6.5 * 1 / 3, 1.61803398874),
+        y_lim=(58 - 0.5, 63 + 0.1),
     )
     create_line_figure_max(
         f"{location}/vit_silu_4n.pt",
@@ -642,6 +644,7 @@ def figure6():
         colorbar="parameters_json.leakage",
         name="32",
         size_factor=(6.5 * 1 / 3, 1.61803398874),
+        y_lim=(58 - 0.5, 63 + 0.1),
     )
     create_line_figure_max(
         f"{location}/vit_gege_4n.pt",
@@ -650,6 +653,7 @@ def figure6():
         colorbar="parameters_json.leakage",
         name="33",
         size_factor=(6.5 * 1 / 3, 1.61803398874),
+        y_lim=(58 - 0.5, 63 + 0.1),
     )
 
 
@@ -686,46 +690,9 @@ if __name__ == '__main__':
         if not i.is_dir():
             continue
         compile_data(i)
-    figure_appendix()
-    # create_convergence_figure(f"{location}/vit_c100_gelu_4n.pt", size_factor=(6.5 * 2 / 3, 1.61803398874 * 2))
-    # create_convergence_figure(f"{location}/vit_c100_gelu_2n.pt", size_factor=(6.5 * 2 / 3, 1.61803398874 * 2))
-    # create_line_figure_max(
-    #     f"{location}/vit_c100_gelu_4n.pt",
-    #     "parameters_json.activation_i",
-    #     "max_test_accuracy",
-    #     colorbar="parameters_json.leakage",
-    #     name="31",
-    #     size_factor=(6.5 * 1 / 3, 1.61803398874),
-    # )
-    # create_line_figure_max(
-    #     f"{location}/vit_c100_gelu_2n.pt",
-    #     "parameters_json.activation_i",
-    #     "max_test_accuracy",
-    #     colorbar="parameters_json.leakage",
-    #     name="31",
-    #     size_factor=(6.5 * 1 / 3, 1.61803398874),
-    # )
 
-    # create_convergence_figure(f"{location}/resnet_c100_li.pt", size_factor=(6.5 * 2 / 3, 1.61803398874 * 2))
-    # create_line_figure(
-    #     f"{location}/resnet_c100_li.pt",
-    #     "parameters_json.activation_i",
-    #     "max_test_accuracy",
-    #     colorbar="parameters_json.leakage",
-    #     name="12",
-    #     size_factor=(6.5 * 1 / 3, 1.61803398874),
-    # )
-    # calculate_max_accuracy(
-    #     f"{location}/conv_lrelu.pt",
-    #     "parameters_json.activation_alpha",
-    #     filters={
-    #         "parameters_json.leakage": 0.7,
-    #     }
-    # )
-    # calculate_max_accuracy(
-    #     f"{location}/conv_gelu_pli.pt",
-    #     "parameters_json.activation_i",
-    #     filters={
-    #         "parameters_json.leakage": 0.7,
-    #     }
-    # )
+    figure2()
+    figure3()
+    figure5()
+    figure6()
+    figure_appendix()

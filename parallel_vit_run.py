@@ -14,7 +14,7 @@ from pathlib import Path
 import torchvision
 from natsort import natsorted, ns
 
-from src.run_vit_model import this_path
+from src.run_vit import this_path
 
 combination_dict = OrderedDict({
     "color": [True, False],
@@ -29,16 +29,15 @@ combination_dict = OrderedDict({
 })
 
 RUN_LIST = {
-    # "gelu_d": "leakage:0.8,activation_fn:gelu,dataset:cifar10",
-    # "silu_d": "leakage:0.8,activation_fn:silu,dataset:cifar10",
+    "gelu_d": "leakage:0.8,activation_fn:gelu,dataset:cifar10",
+    "silu_d": "leakage:0.8,activation_fn:silu,dataset:cifar10",
 
-    # "gelu_4n": "depth:4,activation_fn:gelu,dataset:cifar10",
-    # "silu_4n": "depth:4,activation_fn:silu,dataset:cifar10",
-    # "gege_4n": "depth:4,activation_fn:gege,dataset:cifar10",
+    "gelu_4n": "depth:4,activation_fn:gelu,dataset:cifar10",
+    "silu_4n": "depth:4,activation_fn:silu,dataset:cifar10",
+    "gege_4n": "depth:4,activation_fn:gege,dataset:cifar10",
 
-    # "c100_gelu_d": "leakage:0.8,activation_fn:gelu,dataset:cifar100,precision:64,color:True",
-    # "c100_gelu_4n": "depth:4,activation_fn:gelu,dataset:cifar100,precision:64,color:True",
-    "c100_gelu_2n": "depth:2,activation_fn:gelu,dataset:cifar100,precision:64,color:True",
+    "c100_gelu_d": "leakage:0.8,activation_fn:gelu,dataset:cifar100,precision:64,color:True",
+    "c100_gelu_4n": "depth:4,activation_fn:gelu,dataset:cifar100,precision:64,color:True",
 }
 
 

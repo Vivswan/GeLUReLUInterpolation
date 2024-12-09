@@ -17,7 +17,7 @@ from analogvnn.nn.normalize.Clamp import *
 from analogvnn.nn.precision.ReducePrecision import ReducePrecision
 from natsort import natsorted, ns
 
-from src.run_conv_c10 import this_path
+from src.run_conv import this_path
 
 combination_dict = OrderedDict({
     "color": [False, True],
@@ -38,23 +38,23 @@ combination_dict = OrderedDict({
 })
 
 RUN_LIST = {
-    # "ni": "num_conv_layer:6,num_linear_layer:3,activation_s:1,precision_class:None,noise_class:None,lr:0.001,activation_alpha:0",
-    # "pi": "num_conv_layer:6,num_linear_layer:3,activation_s:1,norm_class:Clamp,precision_class:ReducePrecision,noise_class:None,lr:0.001,activation_alpha:0",
-    # "ns": "num_conv_layer:6,num_linear_layer:3,activation_i:1,precision_class:None,noise_class:None,lr:0.001,activation_alpha:0",
-    # "ps": "num_conv_layer:6,num_linear_layer:3,activation_i:1,norm_class:Clamp,precision_class:ReducePrecision,noise_class:None,lr:0.001,activation_alpha:0",
-    # "ci": "num_linear_layer:3,activation_s:1,precision_class:None,noise_class:None,lr:0.001,activation_alpha:0",
-    # "cli": "leakage:0.8,num_linear_layer:3,activation_s:1,norm_class:Clamp,precision_class:ReducePrecision,noise_class:GaussianNoise,lr:0.001,activation_alpha:0",
-    # "fi": "num_conv_layer:6,activation_s:1,precision_class:None,noise_class:None,lr:0.001,activation_alpha:0",
-    # "fli": "leakage:0.8,num_conv_layer:6,activation_s:1,norm_class:Clamp,precision_class:ReducePrecision,noise_class:GaussianNoise,lr:0.001,activation_alpha:0",
-    # "fli1": "leakage:0.8,num_conv_layer:1,activation_s:1,norm_class:Clamp,precision_class:ReducePrecision,noise_class:GaussianNoise,lr:0.001,activation_alpha:0",
-
     # CIFAR-10
-    # "pli": "num_conv_layer:6,num_linear_layer:3,activation_s:1,norm_class:Clamp,precision_class:ReducePrecision,noise_class:GaussianNoise,lr:0.001,activation_alpha:0",
-    # "pls": "num_conv_layer:6,num_linear_layer:3,activation_i:1,norm_class:Clamp,precision_class:ReducePrecision,noise_class:GaussianNoise,lr:0.001,activation_alpha:0",
-    # "cli1": "leakage:0.8,num_linear_layer:1,activation_s:1,norm_class:Clamp,precision_class:ReducePrecision,noise_class:GaussianNoise,lr:0.001,activation_alpha:0",
-    # "fli0": "leakage:0.8,num_conv_layer:0,activation_s:1,norm_class:Clamp,precision_class:ReducePrecision,noise_class:GaussianNoise,lr:0.001,activation_alpha:0",
-    # "lpli": "num_conv_layer:6,num_linear_layer:3,activation_s:1,norm_class:Clamp,precision_class:ReducePrecision,noise_class:GaussianNoise,leakage:0.8,activation_fn:gelu,activation_alpha:0,color:True,precision:64",
-    # "lrelu": "num_conv_layer:6,num_linear_layer:3,activation_i:0,activation_s:1,norm_class:Clamp,precision_class:ReducePrecision,noise_class:GaussianNoise,activation_fn:gelu,lr:0.001",
+    "ni": "num_conv_layer:6,num_linear_layer:3,activation_s:1,precision_class:None,noise_class:None,lr:0.001,activation_alpha:0",
+    "pi": "num_conv_layer:6,num_linear_layer:3,activation_s:1,norm_class:Clamp,precision_class:ReducePrecision,noise_class:None,lr:0.001,activation_alpha:0",
+    "ns": "num_conv_layer:6,num_linear_layer:3,activation_i:1,precision_class:None,noise_class:None,lr:0.001,activation_alpha:0",
+    "ps": "num_conv_layer:6,num_linear_layer:3,activation_i:1,norm_class:Clamp,precision_class:ReducePrecision,noise_class:None,lr:0.001,activation_alpha:0",
+    "ci": "num_linear_layer:3,activation_s:1,precision_class:None,noise_class:None,lr:0.001,activation_alpha:0",
+    "cli": "leakage:0.8,num_linear_layer:3,activation_s:1,norm_class:Clamp,precision_class:ReducePrecision,noise_class:GaussianNoise,lr:0.001,activation_alpha:0",
+    "fi": "num_conv_layer:6,activation_s:1,precision_class:None,noise_class:None,lr:0.001,activation_alpha:0",
+    "fli": "leakage:0.8,num_conv_layer:6,activation_s:1,norm_class:Clamp,precision_class:ReducePrecision,noise_class:GaussianNoise,lr:0.001,activation_alpha:0",
+    "fli1": "leakage:0.8,num_conv_layer:1,activation_s:1,norm_class:Clamp,precision_class:ReducePrecision,noise_class:GaussianNoise,lr:0.001,activation_alpha:0",
+
+    "pli": "num_conv_layer:6,num_linear_layer:3,activation_s:1,norm_class:Clamp,precision_class:ReducePrecision,noise_class:GaussianNoise,lr:0.001,activation_alpha:0",
+    "pls": "num_conv_layer:6,num_linear_layer:3,activation_i:1,norm_class:Clamp,precision_class:ReducePrecision,noise_class:GaussianNoise,lr:0.001,activation_alpha:0",
+    "cli1": "leakage:0.8,num_linear_layer:1,activation_s:1,norm_class:Clamp,precision_class:ReducePrecision,noise_class:GaussianNoise,lr:0.001,activation_alpha:0",
+    "fli0": "leakage:0.8,num_conv_layer:0,activation_s:1,norm_class:Clamp,precision_class:ReducePrecision,noise_class:GaussianNoise,lr:0.001,activation_alpha:0",
+    "lpli": "num_conv_layer:6,num_linear_layer:3,activation_s:1,norm_class:Clamp,precision_class:ReducePrecision,noise_class:GaussianNoise,leakage:0.8,activation_fn:gelu,activation_alpha:0,color:True,precision:64",
+    "lrelu": "num_conv_layer:6,num_linear_layer:3,activation_i:0,activation_s:1,norm_class:Clamp,precision_class:ReducePrecision,noise_class:GaussianNoise,activation_fn:gelu,lr:0.001",
 
     # CIFAR-100
     "c100gpli": "num_conv_layer:6,num_linear_layer:3,activation_fn:gelu,activation_s:1,norm_class:Clamp,precision_class:ReducePrecision,noise_class:GaussianNoise,lr:0.001,activation_alpha:0,precision:64",
