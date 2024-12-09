@@ -1,0 +1,25 @@
+cff-version: 1.2.0
+message: If you use this software, please cite both the article from preferred-citation and the software itself.
+authors:
+  - family-names: Shah
+    given-names: Vivswan
+  - family-names: Youngblood
+    given-names: Nathan
+title: Leveraging Continuously Differentiable Activation Functions for Learning in Quantized Noisy Environments
+version: 1.0.0
+url: http://arxiv.org/abs/2402.02593
+doi: 10.48550/arXiv.2402.02593
+date-released: '2024-12-09'
+preferred-citation:
+  authors:
+    - family-names: Shah
+      given-names: Vivswan
+    - family-names: Youngblood
+      given-names: Nathan
+  title: Leveraging Continuously Differentiable Activation Functions for Learning in Quantized Noisy Environments
+  doi: 10.48550/arXiv.2402.02593
+  url: http://arxiv.org/abs/2402.02593
+  type: article-journal
+  year: '2024'
+  conference: {}
+  publisher: {}
